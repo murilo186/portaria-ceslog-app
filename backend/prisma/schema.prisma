@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           Int       @id @default(autoincrement())
+  nome         String
+  email        String    @unique
+  senhaHash    String
+  perfil       String
+  turno        String?
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+
+  relatorioItens RelatorioItem[]
+}
+
+model Relatorio {
+  id            Int             @id @default(autoincrement())
+  dataRelatorio DateTime
+  status        String          @default("ABERTO")
+  criadoEm      DateTime        @default(now())
+  finalizadoEm  DateTime?
+
+  itens         RelatorioItem[]
+}
+
+model RelatorioItem {
+  id             Int       @id @default(autoincrement())
+  relatorioId    Int
+  usuarioId      Int
+  empresa        String
+  placaVeiculo   String
+  nome           String
+  horaEntrada    String?
+  horaSaida      String?
+  observacoes    String?
+  turno          String?
+  criadoEm       DateTime  @default(now())
+
+  relatorio      Relatorio @relation(fields: [relatorioId], references: [id])
+  usuario        Usuario   @relation(fields: [usuarioId], references: [id])
+}
