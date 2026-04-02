@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+Ôªøimport { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 
@@ -9,27 +9,27 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-text-900">Dashboard</h1>
-        <p className="text-sm text-text-700">Acompanhe e continue o relatÛrio di·rio da portaria.</p>
+        <p className="text-sm text-text-700">Acompanhe e continue o relat√≥rio di√°rio da portaria.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-text-900">Novo relatÛrio</h2>
+            <h2 className="text-lg font-semibold text-text-900">Novo relat√≥rio</h2>
             <p className="mt-1 text-sm text-text-700">Inicia um novo registro para o dia atual.</p>
           </div>
-          <Button onClick={() => navigate("/relatorio")}>Novo relatÛrio</Button>
+          <Button onClick={() => navigate("/relatorio")}>Novo relat√≥rio</Button>
         </Card>
 
         <Card className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-text-900">Continuar relatÛrio do dia</h2>
+            <h2 className="text-lg font-semibold text-text-900">Continuar relat√≥rio do dia</h2>
             <p className="mt-1 text-sm text-text-700">
-              Retoma o relatÛrio di·rio j· existente para seguir com os lanÁamentos.
+              Retoma o relat√≥rio di√°rio j√° existente para seguir com os lan√ßamentos.
             </p>
           </div>
           <Button variant="secondary" onClick={() => navigate("/relatorio")}>
-            Continuar relatÛrio do dia
+            Continuar relat√≥rio do dia
           </Button>
         </Card>
       </div>
