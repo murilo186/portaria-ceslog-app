@@ -7,42 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Usuario {
-  id           Int       @id @default(autoincrement())
-  nome         String
-  email        String    @unique
-  senhaHash    String
-  perfil       String
-  turno        String?
-  ativo        Boolean   @default(true)
-  criadoEm     DateTime  @default(now())
+enum PerfilUsuario {
+  ADMIN
+  OPERADOR
+}
 
-  relatorioItens RelatorioItem[]
+enum StatusRelatorio {
+  ABERTO
+  FECHADO
+}
+
+model Usuario {
+  id              Int              @id @default(autoincrement())
+  nome            String
+  email           String           @unique
+  senhaHash       String
+  perfil          PerfilUsuario
+  turno           String?
+  ativo           Boolean          @default(true)
+  criadoEm        DateTime         @default(now())
+
+  relatorioItens  RelatorioItem[]
+
+  @@map("usuarios")
 }
 
 model Relatorio {
-  id            Int             @id @default(autoincrement())
-  dataRelatorio DateTime
-  status        String          @default("ABERTO")
-  criadoEm      DateTime        @default(now())
-  finalizadoEm  DateTime?
+  id              Int              @id @default(autoincrement())
+  dataRelatorio   DateTime         @unique
+  status          StatusRelatorio  @default(ABERTO)
+  criadoEm        DateTime         @default(now())
+  finalizadoEm    DateTime?
 
-  itens         RelatorioItem[]
+  itens           RelatorioItem[]
+
+  @@map("relatorios")
 }
 
 model RelatorioItem {
-  id             Int       @id @default(autoincrement())
-  relatorioId    Int
-  usuarioId      Int
-  empresa        String
-  placaVeiculo   String
-  nome           String
-  horaEntrada    String?
-  horaSaida      String?
-  observacoes    String?
-  turno          String?
-  criadoEm       DateTime  @default(now())
+  id              Int        @id @default(autoincrement())
+  relatorioId     Int
+  usuarioId       Int
+  empresa         String
+  placaVeiculo    String
+  nome            String
+  horaEntrada     String?
+  horaSaida       String?
+  observacoes     String?
+  turno           String?
+  criadoEm        DateTime   @default(now())
 
-  relatorio      Relatorio @relation(fields: [relatorioId], references: [id])
-  usuario        Usuario   @relation(fields: [usuarioId], references: [id])
+  relatorio       Relatorio  @relation(fields: [relatorioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  usuario         Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([relatorioId])
+  @@index([usuarioId])
+  @@map("relatorio_itens")
 }

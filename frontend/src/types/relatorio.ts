@@ -1,18 +1,31 @@
 export interface RelatorioItem {
-  id: string;
-  relatorioId: string;
-  descricao: string;
-  turno: string;
-  horario: string;
-  responsavel: string;
-  usuarioId: string;
+  id: number;
+  relatorioId: number;
+  usuarioId: number;
+  empresa: string;
+  placaVeiculo: string;
+  nome: string;
+  horaEntrada: string | null;
+  horaSaida: string | null;
+  observacoes: string | null;
+  turno: string | null;
   criadoEm: string;
 }
 
+export interface RelatorioItemEditableFields {
+  empresa: string;
+  placaVeiculo: string;
+  nome: string;
+  horaEntrada: string;
+  horaSaida: string;
+  observacoes: string;
+}
+
 export interface Relatorio {
-  id: string;
-  data: string;
-  finalizado: boolean;
+  id: number;
+  dataRelatorio: string;
+  status: string;
   criadoEm: string;
+  finalizadoEm: string | null;
   itens: RelatorioItem[];
 }
