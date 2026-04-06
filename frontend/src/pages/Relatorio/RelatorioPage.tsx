@@ -1,6 +1,7 @@
 ﻿import {
   createRelatorioItem,
   deleteRelatorioItem,
+  fecharRelatorio,
   getRelatorioHoje,
   updateRelatorioItem,
 } from "../../services/relatorioService";
@@ -179,6 +180,32 @@ export default function RelatorioPage() {
     }
   };
 
+  const handleCloseRelatorio = async () => {
+    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
+      return;
+    }
+
+    const shouldClose = window.confirm(
+      "Tem certeza que deseja fechar o relatorio? Depois disso, ele ficara somente leitura.",
+    );
+
+    if (!shouldClose) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const closed = await fecharRelatorio(relatorioId, token);
+      setRelatorioStatus(closed.status);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao fechar relatorio";
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const applyCurrentTime = (field: "horaEntrada" | "horaSaida", mode: "create" | "edit") => {
     const currentTime = getCurrentTime();
 
@@ -195,10 +222,20 @@ export default function RelatorioPage() {
   return (
     <>
       <div className="space-y-5 sm:space-y-6">
-        <div className="space-y-1">
-          <Button type="button" variant="secondary" className="mb-2 px-3 py-2 text-xs" onClick={() => navigate(-1)}>
-            Voltar
-          </Button>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(-1)}>
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              className="px-3 py-2 text-xs"
+              onClick={() => void handleCloseRelatorio()}
+              disabled={isSubmitting || isLoading || isReadOnly}
+            >
+              {isReadOnly ? "Relatorio fechado" : "Fechar relatorio"}
+            </Button>
+          </div>
           <h1 className="text-2xl font-semibold text-text-900">Relatorio do Dia</h1>
           <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
           <p className="text-xs text-text-700">Status do relatorio: {relatorioStatus}</p>
@@ -410,3 +447,5 @@ export default function RelatorioPage() {
     </>
   );
 }
+
+
