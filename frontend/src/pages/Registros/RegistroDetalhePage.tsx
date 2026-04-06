@@ -82,7 +82,18 @@ export default function RegistroDetalhePage() {
       return;
     }
 
-    const headers = ["Empresa", "Placa", "Nome", "Perfil", "Entrada", "Saída", "Autor"];
+    const headers = [
+      "Empresa",
+      "Placa",
+      "Nome",
+      "Perfil",
+      "Entrada",
+      "Saída",
+      "Observações",
+      "Turno",
+      "Autor",
+      "Criado em",
+    ];
     const separator = ";";
     const rows = relatorio.itens.map((item) => [
       item.empresa,
@@ -91,7 +102,10 @@ export default function RegistroDetalhePage() {
       perfilPessoaLabel(item.perfilPessoa),
       item.horaEntrada ?? "-",
       item.horaSaida ?? "-",
+      item.observacoes ?? "-",
+      item.turno ?? "-",
       getAutor(item, usuarioLogado),
+      item.criadoEm,
     ]);
 
     const csvContent = [
