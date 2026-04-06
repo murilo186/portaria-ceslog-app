@@ -1,4 +1,5 @@
-﻿import type { ReactNode } from "react";
+﻿import { clearAuthSession } from "../services/authStorage";
+import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type AppLayoutProps = {
@@ -11,9 +12,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isLoginPage = location.pathname === "/";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("authToken");
-    sessionStorage.removeItem("token");
+    clearAuthSession();
     navigate("/");
   };
 

@@ -1,4 +1,4 @@
-import type { Usuario } from "./usuario";
+﻿import type { Usuario } from "./usuario";
 
 export interface LoginRequest {
   email: string;
@@ -11,6 +11,6 @@ export interface LoginResponse {
 }
 
 export interface AuthState {
-  usuario: Usuario | null;
-  token: string | null;
+  usuario: Usuario;
+  token: string;
 }
