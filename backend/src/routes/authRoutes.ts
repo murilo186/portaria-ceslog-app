@@ -1,12 +1,9 @@
-import { Router } from 'express';
+﻿import { loginController } from "../controllers/authController";
+import { loginRateLimit } from "../middlewares/rateLimitMiddleware";
+import { Router } from "express";
 
 const router = Router();
 
-router.post('/login', (req, res) => {
-  return res.json({
-    message: 'Login route OK',
-    body: req.body
-  });
-});
+router.post("/login", loginRateLimit, loginController);
 
 export default router;
