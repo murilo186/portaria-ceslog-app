@@ -74,3 +74,4 @@ export function validateRelatorioPayload(input: RelatorioItemEditableFields): st
 
   return errors;
 }
+

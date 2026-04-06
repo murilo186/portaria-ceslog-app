@@ -73,3 +73,4 @@ export interface ClosedReportsFilters {
   busca?: string;
 }
 
+
