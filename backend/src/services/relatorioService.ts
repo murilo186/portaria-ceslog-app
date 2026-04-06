@@ -5,7 +5,28 @@ import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
 import type { Prisma } from "@prisma/client";
 
-async function ensureTodayReport() {
+function reportInclude() {
+  return {
+    itens: {
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            perfil: true,
+            turno: true,
+          },
+        },
+      },
+      orderBy: {
+        id: "desc" as const,
+      },
+    },
+  };
+}
+
+async function ensureOpenReport() {
   const todayKey = getBusinessDateKey();
   const todayDate = reportDateFromKey(todayKey);
 
@@ -22,38 +43,31 @@ async function ensureTodayReport() {
     },
   });
 
-  const relatorio = await prisma.relatorio.upsert({
-    where: { dataRelatorio: todayDate },
-    update: {},
-    create: {
-      dataRelatorio: todayDate,
+  const relatorioAberto = await prisma.relatorio.findFirst({
+    where: {
       status: "ABERTO",
     },
-    include: {
-      itens: {
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              nome: true,
-              email: true,
-              perfil: true,
-              turno: true,
-            },
-          },
-        },
-        orderBy: {
-          id: "desc",
-        },
-      },
+    orderBy: {
+      criadoEm: "desc",
     },
+    include: reportInclude(),
   });
 
-  return relatorio;
+  if (relatorioAberto) {
+    return relatorioAberto;
+  }
+
+  return prisma.relatorio.create({
+    data: {
+      dataRelatorio: new Date(),
+      status: "ABERTO",
+    },
+    include: reportInclude(),
+  });
 }
 
 export async function getTodayReportService() {
-  return ensureTodayReport();
+  return ensureOpenReport();
 }
 
 export async function listReportsService() {

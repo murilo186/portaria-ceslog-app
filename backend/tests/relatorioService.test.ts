@@ -1,7 +1,8 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateManyMock = vi.fn();
-const upsertMock = vi.fn();
+const findFirstMock = vi.fn();
+const createMock = vi.fn();
 const relatorioFindUniqueMock = vi.fn();
 const relatorioUpdateMock = vi.fn();
 const relatorioCountMock = vi.fn();
@@ -18,7 +19,8 @@ vi.mock("../src/lib/prisma", () => ({
   prisma: {
     relatorio: {
       updateMany: (...args: unknown[]) => updateManyMock(...args),
-      upsert: (...args: unknown[]) => upsertMock(...args),
+      findFirst: (...args: unknown[]) => findFirstMock(...args),
+      create: (...args: unknown[]) => createMock(...args),
       findUnique: (...args: unknown[]) => relatorioFindUniqueMock(...args),
       update: (...args: unknown[]) => relatorioUpdateMock(...args),
       count: (...args: unknown[]) => relatorioCountMock(...args),
@@ -53,22 +55,39 @@ describe("relatorioService regras críticas", () => {
     vi.clearAllMocks();
   });
 
-  it("garante criação/continuidade de um único relatório por dia via upsert", async () => {
+  it("retorna relatório aberto atual quando existir", async () => {
     updateManyMock.mockResolvedValue({ count: 0 });
-    upsertMock.mockResolvedValue({
+    findFirstMock.mockResolvedValue({
       id: 5,
-      dataRelatorio: new Date("2026-04-06T00:00:00.000Z"),
+      dataRelatorio: new Date("2026-04-06T10:30:00.000Z"),
       status: "ABERTO",
       itens: [],
     });
 
-    await getTodayReportService();
+    const report = await getTodayReportService();
 
     expect(updateManyMock).toHaveBeenCalledTimes(1);
-    expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(findFirstMock).toHaveBeenCalledTimes(1);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(report.id).toBe(5);
+  });
 
-    const upsertArgs = upsertMock.mock.calls[0][0] as { where: { dataRelatorio: Date } };
-    expect(upsertArgs.where.dataRelatorio).toBeInstanceOf(Date);
+  it("cria novo relatório quando não existe nenhum aberto", async () => {
+    updateManyMock.mockResolvedValue({ count: 0 });
+    findFirstMock.mockResolvedValue(null);
+    createMock.mockResolvedValue({
+      id: 5,
+      dataRelatorio: new Date("2026-04-06T11:00:00.000Z"),
+      status: "ABERTO",
+      itens: [],
+    });
+
+    const report = await getTodayReportService();
+
+    expect(updateManyMock).toHaveBeenCalledTimes(1);
+    expect(findFirstMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledTimes(1);
+    expect(report.id).toBe(5);
   });
 
   it("bloqueia criação de item em relatório fechado", async () => {
