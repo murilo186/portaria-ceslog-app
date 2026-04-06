@@ -99,6 +99,7 @@ describe("relatorioService regras críticas", () => {
       createRelatorioItemService(
         9,
         {
+          perfilPessoa: "VISITANTE",
           empresa: "CESLOG",
           placaVeiculo: "ABC1D23",
           nome: "João",
@@ -130,6 +131,7 @@ describe("relatorioService regras críticas", () => {
         9,
         20,
         {
+          perfilPessoa: "VISITANTE",
           empresa: "CESLOG",
           placaVeiculo: "ABC1D23",
           nome: "Teste",
@@ -160,6 +162,7 @@ describe("relatorioService regras críticas", () => {
         10,
         21,
         {
+          perfilPessoa: "VISITANTE",
           empresa: "CESLOG",
           placaVeiculo: "ABC1D23",
           nome: "Teste",

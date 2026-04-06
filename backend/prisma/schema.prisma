@@ -17,6 +17,15 @@ enum StatusRelatorio {
   FECHADO
 }
 
+enum PerfilPessoa {
+  VISITANTE
+  FORNECEDOR
+  PRESTADOR
+  PARCEIRO
+  COLABORADOR
+  AGREGADO
+}
+
 model Usuario {
   id              Int              @id @default(autoincrement())
   nome            String
@@ -48,6 +57,7 @@ model RelatorioItem {
   id              Int        @id @default(autoincrement())
   relatorioId     Int
   usuarioId       Int
+  perfilPessoa    PerfilPessoa @default(VISITANTE)
   empresa         String
   placaVeiculo    String
   nome            String
@@ -64,3 +74,4 @@ model RelatorioItem {
   @@index([usuarioId])
   @@map("relatorio_itens")
 }
+

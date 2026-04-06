@@ -63,6 +63,7 @@ describe("RelatorioPage", () => {
       id: 20,
       relatorioId: 10,
       usuarioId: 1,
+      perfilPessoa: "VISITANTE",
       empresa: "CESLOG",
       placaVeiculo: "ABC1D23",
       nome: "João",
@@ -93,6 +94,7 @@ describe("RelatorioPage", () => {
     const callArgs = createRelatorioItemMock.mock.calls[0];
     expect(callArgs[0]).toBe(10);
     expect(callArgs[1]).toMatchObject({
+      perfilPessoa: "VISITANTE",
       empresa: "CESLOG",
       placaVeiculo: "ABC1D23",
       nome: "João",

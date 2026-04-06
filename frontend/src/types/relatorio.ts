@@ -1,9 +1,18 @@
 ﻿import type { Usuario } from "./usuario";
 
+export type PerfilPessoa =
+  | "VISITANTE"
+  | "FORNECEDOR"
+  | "PRESTADOR"
+  | "PARCEIRO"
+  | "COLABORADOR"
+  | "AGREGADO";
+
 export interface RelatorioItem {
   id: number;
   relatorioId: number;
   usuarioId: number;
+  perfilPessoa: PerfilPessoa;
   empresa: string;
   placaVeiculo: string;
   nome: string;
@@ -16,6 +25,7 @@ export interface RelatorioItem {
 }
 
 export interface RelatorioItemEditableFields {
+  perfilPessoa: PerfilPessoa;
   empresa: string;
   placaVeiculo: string;
   nome: string;

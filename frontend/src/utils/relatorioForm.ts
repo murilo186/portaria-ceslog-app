@@ -1,7 +1,16 @@
-﻿import type { RelatorioItemEditableFields } from "../types/relatorio";
+﻿import type { PerfilPessoa, RelatorioItemEditableFields } from "../types/relatorio";
 
 const PLACA_REGEX = /^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/;
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const PERFIL_PESSOA_VALUES: PerfilPessoa[] = [
+  "VISITANTE",
+  "FORNECEDOR",
+  "PRESTADOR",
+  "PARCEIRO",
+  "COLABORADOR",
+  "AGREGADO",
+];
 
 function collapseSpaces(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -23,6 +32,7 @@ export function formatPlacaInput(value: string): string {
 
 export function normalizeRelatorioPayload(input: RelatorioItemEditableFields): RelatorioItemEditableFields {
   return {
+    perfilPessoa: input.perfilPessoa,
     empresa: collapseSpaces(input.empresa),
     placaVeiculo: keepOnlyAlphaNumeric(input.placaVeiculo.toUpperCase()),
     nome: collapseSpaces(input.nome),
@@ -34,6 +44,10 @@ export function normalizeRelatorioPayload(input: RelatorioItemEditableFields): R
 
 export function validateRelatorioPayload(input: RelatorioItemEditableFields): string[] {
   const errors: string[] = [];
+
+  if (!PERFIL_PESSOA_VALUES.includes(input.perfilPessoa)) {
+    errors.push("Perfil de pessoa inválido.");
+  }
 
   if (!input.empresa.trim()) {
     errors.push("Empresa é obrigatória.");
@@ -60,4 +74,3 @@ export function validateRelatorioPayload(input: RelatorioItemEditableFields): st
 
   return errors;
 }
-

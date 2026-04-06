@@ -8,6 +8,7 @@ import Card from "../../components/Card";
 import StatusBadge from "../../components/StatusBadge";
 import type { Relatorio } from "../../types/relatorio";
 import type { Usuario } from "../../types/usuario";
+import { perfilPessoaLabel } from "../../utils/perfilPessoa";
 
 function formatDate(dateIso: string): string {
   const iso = dateIso.slice(0, 10);
@@ -81,12 +82,13 @@ export default function RegistroDetalhePage() {
       return;
     }
 
-    const headers = ["Empresa", "Placa", "Nome", "Entrada", "Saída", "Autor"];
+    const headers = ["Empresa", "Placa", "Nome", "Perfil", "Entrada", "Saída", "Autor"];
     const separator = ";";
     const rows = relatorio.itens.map((item) => [
       item.empresa,
       item.placaVeiculo,
       item.nome,
+      perfilPessoaLabel(item.perfilPessoa),
       item.horaEntrada ?? "-",
       item.horaSaida ?? "-",
       getAutor(item, usuarioLogado),
@@ -147,6 +149,7 @@ export default function RegistroDetalhePage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Empresa</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Placa</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Nome</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Perfil</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Entrada</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saída</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Autor</th>
@@ -158,13 +161,13 @@ export default function RegistroDetalhePage() {
             <tbody className="divide-y divide-surface-200 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-text-700">
+                  <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-text-700">
                     Carregando...
                   </td>
                 </tr>
               ) : !relatorio || relatorio.itens.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-text-700">
+                  <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-text-700">
                     Nenhum item neste registro.
                   </td>
                 </tr>
@@ -174,6 +177,7 @@ export default function RegistroDetalhePage() {
                     <td className="px-4 py-3 text-sm text-text-900">{item.empresa}</td>
                     <td className="px-4 py-3 text-sm text-text-900">{item.placaVeiculo}</td>
                     <td className="px-4 py-3 text-sm text-text-900">{item.nome}</td>
+                    <td className="px-4 py-3 text-sm text-text-900">{perfilPessoaLabel(item.perfilPessoa)}</td>
                     <td className="px-4 py-3 text-sm text-text-900">{item.horaEntrada ?? "-"}</td>
                     <td className="px-4 py-3 text-sm text-text-900">{item.horaSaida ?? "-"}</td>
                     <td className="px-4 py-3 text-sm text-text-900">{getAutor(item, usuarioLogado)}</td>

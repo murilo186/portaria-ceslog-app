@@ -275,6 +275,7 @@ export async function createRelatorioItemService(
     data: {
       relatorioId: relatorio.id,
       usuarioId: user.id,
+      perfilPessoa: payload.perfilPessoa,
       empresa: payload.empresa.trim(),
       placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
       nome: payload.nome.trim(),
@@ -347,6 +348,7 @@ export async function updateRelatorioItemService(
   return prisma.relatorioItem.update({
     where: { id: item.id },
     data: {
+      perfilPessoa: payload.perfilPessoa,
       empresa: payload.empresa.trim(),
       placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
       nome: payload.nome.trim(),

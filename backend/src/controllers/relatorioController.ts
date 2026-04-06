@@ -16,6 +16,14 @@ import { z } from "zod";
 
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const placaRegex = /^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/;
+const perfilPessoaValues = [
+  "VISITANTE",
+  "FORNECEDOR",
+  "PRESTADOR",
+  "PARCEIRO",
+  "COLABORADOR",
+  "AGREGADO",
+] as const;
 
 const optionalTimeSchema = z
   .string()
@@ -25,6 +33,7 @@ const optionalTimeSchema = z
   .optional();
 
 const relatorioItemSchema = z.object({
+  perfilPessoa: z.enum(perfilPessoaValues),
   empresa: z.string().trim().min(1, "Empresa é obrigatória"),
   placaVeiculo: z
     .string()
@@ -189,4 +198,5 @@ export async function closeRelatorioController(req: Request, res: Response, next
     return next(error);
   }
 }
+
 

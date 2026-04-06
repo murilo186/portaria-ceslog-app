@@ -16,9 +16,11 @@ import Input from "../../components/Input";
 import StatusBadge from "../../components/StatusBadge";
 import type { RelatorioItem, RelatorioItemEditableFields } from "../../types/relatorio";
 import type { Usuario } from "../../types/usuario";
+import { PERFIL_PESSOA_OPTIONS, perfilPessoaLabel } from "../../utils/perfilPessoa";
 import { formatPlacaInput, normalizeRelatorioPayload, validateRelatorioPayload } from "../../utils/relatorioForm";
 
 const initialFormValues: RelatorioItemEditableFields = {
+  perfilPessoa: "VISITANTE",
   empresa: "",
   placaVeiculo: "",
   nome: "",
@@ -190,6 +192,7 @@ export default function RelatorioPage() {
 
     setEditingItemId(item.id);
     setEditFormValues({
+      perfilPessoa: item.perfilPessoa,
       empresa: item.empresa,
       placaVeiculo: item.placaVeiculo,
       nome: item.nome,
@@ -366,6 +369,30 @@ export default function RelatorioPage() {
             />
 
             <div className="flex w-full flex-col gap-1.5">
+              <label htmlFor="perfilPessoa" className="text-sm font-medium text-text-700">
+                Perfil da pessoa
+              </label>
+              <select
+                id="perfilPessoa"
+                value={formValues.perfilPessoa}
+                onChange={(event) =>
+                  setFormValues((prev) => ({
+                    ...prev,
+                    perfilPessoa: event.target.value as RelatorioItemEditableFields["perfilPessoa"],
+                  }))
+                }
+                className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                disabled={isReadOnly}
+              >
+                {PERFIL_PESSOA_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex w-full flex-col gap-1.5">
               <label htmlFor="horaEntrada" className="text-sm font-medium text-text-700">
                 Hora de entrada
               </label>
@@ -456,6 +483,7 @@ export default function RelatorioPage() {
                   <p className="text-sm font-semibold text-text-900">{item.nome}</p>
                   <p className="text-sm text-text-700">Empresa: {item.empresa}</p>
                   <p className="text-sm text-text-700">Placa: {item.placaVeiculo}</p>
+                  <p className="text-sm text-text-700">Perfil: {perfilPessoaLabel(item.perfilPessoa)}</p>
                   <p className="text-sm text-text-700">Entrada: {item.horaEntrada ?? "-"}</p>
                   <p className="text-sm text-text-700">Saída: {item.horaSaida ?? "-"}</p>
                   <p className="text-sm text-text-700">Turno: {item.turno ?? "-"}</p>
@@ -499,6 +527,7 @@ export default function RelatorioPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Empresa</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Placa</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Nome</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Perfil</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Entrada</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saída</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Turno</th>
@@ -510,13 +539,13 @@ export default function RelatorioPage() {
               <tbody className="divide-y divide-surface-200 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">
+                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-text-700">
                       Carregando...
                     </td>
                   </tr>
                 ) : sortedItens.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">
+                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-text-700">
                       Nenhum registro adicionado até o momento.
                     </td>
                   </tr>
@@ -529,6 +558,7 @@ export default function RelatorioPage() {
                         <td className="px-4 py-3 text-sm text-text-900">{item.empresa}</td>
                         <td className="px-4 py-3 text-sm text-text-900">{item.placaVeiculo}</td>
                         <td className="px-4 py-3 text-sm text-text-900">{item.nome}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{perfilPessoaLabel(item.perfilPessoa)}</td>
                         <td className="px-4 py-3 text-sm text-text-900">{item.horaEntrada ?? "-"}</td>
                         <td className="px-4 py-3 text-sm text-text-900">{item.horaSaida ?? "-"}</td>
                         <td className="px-4 py-3 text-sm text-text-900">{item.turno ?? "-"}</td>
@@ -604,6 +634,30 @@ export default function RelatorioPage() {
                 required
                 disabled={isReadOnly}
               />
+
+              <div className="flex w-full flex-col gap-1.5">
+                <label htmlFor="edit-perfilPessoa" className="text-sm font-medium text-text-700">
+                  Perfil da pessoa
+                </label>
+                <select
+                  id="edit-perfilPessoa"
+                  value={editFormValues.perfilPessoa}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      perfilPessoa: event.target.value as RelatorioItemEditableFields["perfilPessoa"],
+                    }))
+                  }
+                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
+                >
+                  {PERFIL_PESSOA_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="flex w-full flex-col gap-1.5">
                 <label htmlFor="edit-horaEntrada" className="text-sm font-medium text-text-700">

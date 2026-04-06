@@ -1,4 +1,13 @@
-﻿export type RelatorioItemEditableInput = {
+﻿export type PerfilPessoa =
+  | "VISITANTE"
+  | "FORNECEDOR"
+  | "PRESTADOR"
+  | "PARCEIRO"
+  | "COLABORADOR"
+  | "AGREGADO";
+
+export type RelatorioItemEditableInput = {
+  perfilPessoa: PerfilPessoa;
   empresa: string;
   placaVeiculo: string;
   nome: string;
