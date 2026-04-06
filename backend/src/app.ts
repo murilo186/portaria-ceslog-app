@@ -1,10 +1,12 @@
 ﻿import { env } from "./config/env";
 import { errorMiddleware } from "./middlewares/errorMiddleware";
+import healthRoutes from "./routes/healthRoutes";
 import routes from "./routes";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import { randomUUID } from "node:crypto";
 
 const app = express();
 
@@ -18,13 +20,21 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-app.get("/health", (_req, res) => {
-  return res.status(200).json({ ok: true });
+app.use((req, res, next) => {
+  req.requestId = randomUUID();
+  res.setHeader("x-request-id", req.requestId);
+  next();
 });
 
+app.use("/", healthRoutes);
 app.use("/api", routes);
 app.use(errorMiddleware);
 
-app.listen(env.PORT, () => {
-  console.log(`Backend listening on http://localhost:${env.PORT}`);
-});
+export function startServer() {
+  app.listen(env.PORT, () => {
+    console.log(`Backend listening on http://localhost:${env.PORT}`);
+  });
+}
+
+export default app;
+

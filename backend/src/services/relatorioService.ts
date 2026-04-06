@@ -2,7 +2,8 @@
 import { prisma } from "../lib/prisma";
 import { getBusinessDateKey, reportDateFromKey } from "../utils/date";
 import type { AuthenticatedUser } from "../types/auth";
-import type { RelatorioItemEditableInput } from "../types/relatorio";
+import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
+import type { Prisma } from "@prisma/client";
 
 async function ensureTodayReport() {
   const todayKey = getBusinessDateKey();
@@ -70,6 +71,99 @@ export async function listReportsService() {
   });
 }
 
+function getDateRange(data?: string): { gte: Date; lt: Date } | undefined {
+  if (!data) {
+    return undefined;
+  }
+
+  const isIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(data);
+
+  if (!isIsoDate) {
+    throw new AppError("Data inválida. Use o formato AAAA-MM-DD.", 400, "INVALID_DATE_FILTER");
+  }
+
+  const start = new Date(`${data}T00:00:00.000Z`);
+
+  if (Number.isNaN(start.getTime())) {
+    throw new AppError("Data inválida. Use o formato AAAA-MM-DD.", 400, "INVALID_DATE_FILTER");
+  }
+
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return {
+    gte: start,
+    lt: end,
+  };
+}
+
+export async function listClosedReportsService(query: ClosedReportsQuery) {
+  const page = Math.max(1, query.page);
+  const pageSize = Math.min(50, Math.max(1, query.pageSize));
+  const normalizedSearch = query.busca?.trim();
+  const dateRange = getDateRange(query.data);
+
+  const where: Prisma.RelatorioWhereInput = {
+    status: "FECHADO",
+  };
+
+  if (dateRange) {
+    where.dataRelatorio = dateRange;
+  }
+
+  if (normalizedSearch) {
+    where.itens = {
+      some: {
+        OR: [
+          {
+            placaVeiculo: {
+              contains: normalizedSearch,
+              mode: "insensitive",
+            },
+          },
+          {
+            nome: {
+              contains: normalizedSearch,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+    };
+  }
+
+  const [total, data] = await prisma.$transaction([
+    prisma.relatorio.count({ where }),
+    prisma.relatorio.findMany({
+      where,
+      include: {
+        _count: {
+          select: {
+            itens: true,
+          },
+        },
+      },
+      orderBy: {
+        dataRelatorio: "desc",
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
+
+  return {
+    data,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+  };
+}
+
 export async function getReportByIdService(relatorioId: number) {
   const relatorio = await prisma.relatorio.findUnique({
     where: { id: relatorioId },
@@ -94,14 +188,17 @@ export async function getReportByIdService(relatorioId: number) {
   });
 
   if (!relatorio) {
-    throw new AppError("Relatorio nao encontrado", 404);
+    throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
   }
 
   return relatorio;
 }
 
 function parseNullableString(value?: string): string | null {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
+
   const cleaned = value.trim();
   return cleaned.length > 0 ? cleaned : null;
 }
@@ -116,11 +213,11 @@ export async function createRelatorioItemService(
   });
 
   if (!relatorio) {
-    throw new AppError("Relatorio nao encontrado", 404);
+    throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
   }
 
   if (relatorio.status === "FECHADO") {
-    throw new AppError("Relatorio fechado. Nao e possivel adicionar itens.", 409);
+    throw new AppError("Relatório fechado. Não é possível adicionar itens.", 409, "REPORT_CLOSED");
   }
 
   return prisma.relatorioItem.create({
@@ -167,7 +264,7 @@ async function getManagedItem(relatorioId: number, itemId: number) {
   });
 
   if (!item || item.relatorioId !== relatorioId) {
-    throw new AppError("Item do relatorio nao encontrado", 404);
+    throw new AppError("Item do relatório não encontrado", 404, "ITEM_NOT_FOUND");
   }
 
   return item;
@@ -175,14 +272,14 @@ async function getManagedItem(relatorioId: number, itemId: number) {
 
 function assertCanManageItem(user: AuthenticatedUser, itemUserId: number, status: string) {
   if (status === "FECHADO") {
-    throw new AppError("Relatorio fechado. Nao e possivel alterar itens.", 409);
+    throw new AppError("Relatório fechado. Não é possível alterar itens.", 409, "REPORT_CLOSED");
   }
 
   const isOwner = user.id === itemUserId;
   const isAdmin = user.perfil === "ADMIN";
 
   if (!isOwner && !isAdmin) {
-    throw new AppError("Sem permissao para alterar item de outro usuario", 403);
+    throw new AppError("Sem permissão para alterar item de outro usuário", 403, "FORBIDDEN_ITEM_OWNER");
   }
 }
 
@@ -242,7 +339,7 @@ export async function closeRelatorioService(relatorioId: number) {
   });
 
   if (!relatorio) {
-    throw new AppError("Relatorio nao encontrado", 404);
+    throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
   }
 
   if (relatorio.status === "FECHADO") {
@@ -257,3 +354,4 @@ export async function closeRelatorioService(relatorioId: number) {
     },
   });
 }
+

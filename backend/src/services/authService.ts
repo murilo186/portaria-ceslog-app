@@ -10,13 +10,13 @@ export async function loginService(input: LoginInput) {
   });
 
   if (!usuario || !usuario.ativo) {
-    throw new AppError("Credenciais invalidas", 401);
+    throw new AppError("Credenciais inválidas", 401, "INVALID_CREDENTIALS");
   }
 
   const senhaValida = await bcrypt.compare(input.senha, usuario.senhaHash);
 
   if (!senhaValida) {
-    throw new AppError("Credenciais invalidas", 401);
+    throw new AppError("Credenciais inválidas", 401, "INVALID_CREDENTIALS");
   }
 
   const token = signToken({
@@ -38,3 +38,4 @@ export async function loginService(input: LoginInput) {
     },
   };
 }
+

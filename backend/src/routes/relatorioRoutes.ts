@@ -4,6 +4,7 @@
   deleteRelatorioItemController,
   getReportByIdController,
   getTodayReportController,
+  listClosedReportsController,
   listReportsController,
   updateRelatorioItemController,
 } from "../controllers/relatorioController";
@@ -17,6 +18,7 @@ router.use(authMiddleware);
 
 router.get("/hoje", getTodayReportController);
 router.get("/", listReportsController);
+router.get("/fechados", listClosedReportsController);
 router.get("/:relatorioId", getReportByIdController);
 
 router.post("/:relatorioId/itens", writeRateLimit, createRelatorioItemController);
@@ -25,3 +27,4 @@ router.delete("/:relatorioId/itens/:itemId", writeRateLimit, deleteRelatorioItem
 router.post("/:relatorioId/fechar", writeRateLimit, closeRelatorioController);
 
 export default router;
+

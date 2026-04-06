@@ -6,3 +6,11 @@
   horaSaida?: string;
   observacoes?: string;
 };
+
+export type ClosedReportsQuery = {
+  page: number;
+  pageSize: number;
+  data?: string;
+  busca?: string;
+};
+

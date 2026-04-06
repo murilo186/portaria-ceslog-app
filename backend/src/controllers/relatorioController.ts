@@ -5,19 +5,34 @@ import {
   deleteRelatorioItemService,
   getReportByIdService,
   getTodayReportService,
+  listClosedReportsService,
   listReportsService,
   updateRelatorioItemService,
 } from "../services/relatorioService";
 import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
+const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+const placaRegex = /^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/;
+
+const optionalTimeSchema = z
+  .string()
+  .trim()
+  .regex(timeRegex, "Horário deve estar no formato HH:mm")
+  .or(z.literal(""))
+  .optional();
+
 const relatorioItemSchema = z.object({
-  empresa: z.string().min(1),
-  placaVeiculo: z.string().min(1),
-  nome: z.string().min(1),
-  horaEntrada: z.string().optional(),
-  horaSaida: z.string().optional(),
-  observacoes: z.string().optional(),
+  empresa: z.string().trim().min(1, "Empresa é obrigatória"),
+  placaVeiculo: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(placaRegex, "Placa inválida. Use formato ABC1D23 ou ABC-1234"),
+  nome: z.string().trim().min(1, "Nome é obrigatório"),
+  horaEntrada: optionalTimeSchema,
+  horaSaida: optionalTimeSchema,
+  observacoes: z.string().trim().max(500, "Observações devem ter até 500 caracteres").optional(),
 });
 
 const relatorioIdSchema = z.object({
@@ -29,9 +44,19 @@ const relatorioItemIdSchema = z.object({
   itemId: z.coerce.number().int().positive(),
 });
 
+const closedReportsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(50).default(10),
+  data: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD")
+    .optional(),
+  busca: z.string().trim().max(100).optional(),
+});
+
 function ensureUser(req: Request) {
   if (!req.user) {
-    throw new AppError("Nao autenticado", 401);
+    throw new AppError("Não autenticado", 401, "AUTH_REQUIRED");
   }
 
   return req.user;
@@ -52,6 +77,18 @@ export async function listReportsController(req: Request, res: Response, next: N
     ensureUser(req);
     const reports = await listReportsService();
     return res.status(200).json(reports);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listClosedReportsController(req: Request, res: Response, next: NextFunction) {
+  try {
+    ensureUser(req);
+    const query = closedReportsQuerySchema.parse(req.query);
+    const result = await listClosedReportsService(query);
+
+    return res.status(200).json(result);
   } catch (error) {
     return next(error);
   }
@@ -122,3 +159,4 @@ export async function closeRelatorioController(req: Request, res: Response, next
     return next(error);
   }
 }
+

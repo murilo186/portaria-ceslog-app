@@ -13,5 +13,6 @@ export const writeRateLimit = rateLimit({
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Limite de requisicoes excedido." },
+  message: { message: "Limite de requisições excedido." },
 });
+
