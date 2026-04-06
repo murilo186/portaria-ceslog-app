@@ -1,17 +1,34 @@
-﻿import { saveAuthSession } from "../../services/authStorage";
+﻿import { getAuthSession, saveAuthSession } from "../../services/authStorage";
+import { getUserErrorMessage } from "../../services/errorService";
 import { login } from "../../services/authService";
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
 
+type LoginLocationState = {
+  authMessage?: string;
+};
+
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuthSession();
+
+    if (auth) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
+
+  const locationState = (location.state as LoginLocationState | null) ?? null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,9 +38,9 @@ export default function LoginPage() {
     try {
       const response = await login({ email, senha });
       saveAuthSession({ token: response.token, usuario: response.usuario });
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Nao foi possivel fazer login";
+      const message = getUserErrorMessage(error, "Não foi possível fazer login");
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -66,6 +83,7 @@ export default function LoginPage() {
               required
             />
 
+            {locationState?.authMessage ? <p className="text-sm text-amber-700">{locationState.authMessage}</p> : null}
             {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
 
             <Button type="submit" className="mt-2 w-full" disabled={isSubmitting}>
@@ -77,3 +95,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

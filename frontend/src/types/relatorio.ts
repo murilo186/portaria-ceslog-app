@@ -43,3 +43,23 @@ export interface RelatorioResumo {
     itens: number;
   };
 }
+
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface ClosedReportsFilters {
+  page?: number;
+  pageSize?: number;
+  data?: string;
+  busca?: string;
+}
+

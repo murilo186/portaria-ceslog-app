@@ -1,9 +1,11 @@
 ﻿import { getAuthSession } from "../../services/authStorage";
+import { getUserErrorMessage } from "../../services/errorService";
 import { getRelatorioById } from "../../services/relatorioService";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
+import StatusBadge from "../../components/StatusBadge";
 import type { Relatorio } from "../../types/relatorio";
 import type { Usuario } from "../../types/usuario";
 
@@ -26,7 +28,7 @@ function getAutor(item: Relatorio["itens"][number], fallbackUser: Usuario | null
 }
 
 function escapeCsvValue(value: string): string {
-  const escaped = value.replace(/"/g, "\"\"");
+  const escaped = value.replace(/"/g, '""');
   return `"${escaped}"`;
 }
 
@@ -56,15 +58,14 @@ export default function RegistroDetalhePage() {
         const parsedId = Number(relatorioId);
 
         if (!Number.isFinite(parsedId)) {
-          setErrorMessage("Identificador de relatorio invalido");
+          setErrorMessage("Identificador de relatório inválido.");
           return;
         }
 
         const detail = await getRelatorioById(parsedId, authSession.token);
         setRelatorio(detail);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Erro ao carregar registro";
-        setErrorMessage(message);
+        setErrorMessage(getUserErrorMessage(error, "Erro ao carregar registro"));
       } finally {
         setIsLoading(false);
       }
@@ -80,7 +81,7 @@ export default function RegistroDetalhePage() {
       return;
     }
 
-    const headers = ["Empresa", "Placa", "Nome", "Entrada", "Saida", "Autor"];
+    const headers = ["Empresa", "Placa", "Nome", "Entrada", "Saída", "Autor"];
     const separator = ";";
     const rows = relatorio.itens.map((item) => [
       item.empresa,
@@ -125,11 +126,16 @@ export default function RegistroDetalhePage() {
           >
             Baixar CSV
           </Button>
+          {relatorio ? <StatusBadge status={relatorio.status} /> : null}
         </div>
+
         <h1 className="text-2xl font-semibold text-text-900">
           {relatorio ? `REGISTRO - ${formatDate(relatorio.dataRelatorio)}` : "REGISTRO"}
         </h1>
         <p className="text-sm text-text-700">Tabela do registro selecionado.</p>
+        {!isAdmin ? (
+          <p className="text-xs text-text-700">Somente administradores podem editar registros fechados.</p>
+        ) : null}
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
       </div>
 
@@ -142,10 +148,10 @@ export default function RegistroDetalhePage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Placa</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Nome</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Entrada</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saida</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saída</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Autor</th>
                 {isAdmin ? (
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Acoes</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Ações</th>
                 ) : null}
               </tr>
             </thead>
@@ -188,3 +194,9 @@ export default function RegistroDetalhePage() {
     </div>
   );
 }
+
+
+
+
+
+

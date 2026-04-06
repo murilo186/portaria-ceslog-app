@@ -1,5 +1,7 @@
 ﻿import { apiRequest } from "./api";
 import type {
+  ClosedReportsFilters,
+  PaginatedResponse,
   Relatorio,
   RelatorioItem,
   RelatorioItemEditableFields,
@@ -12,6 +14,36 @@ export async function getRelatorioHoje(token: string): Promise<Relatorio> {
 
 export async function listRelatorios(token: string): Promise<RelatorioResumo[]> {
   return apiRequest<RelatorioResumo[]>("/api/relatorios", { token });
+}
+
+export async function listRelatoriosFechados(
+  token: string,
+  filters: ClosedReportsFilters,
+): Promise<PaginatedResponse<RelatorioResumo>> {
+  const query = new URLSearchParams();
+
+  if (filters.page) {
+    query.set("page", String(filters.page));
+  }
+
+  if (filters.pageSize) {
+    query.set("pageSize", String(filters.pageSize));
+  }
+
+  if (filters.data) {
+    query.set("data", filters.data);
+  }
+
+  if (filters.busca) {
+    query.set("busca", filters.busca);
+  }
+
+  const queryString = query.toString();
+
+  return apiRequest<PaginatedResponse<RelatorioResumo>>(
+    `/api/relatorios/fechados${queryString ? `?${queryString}` : ""}`,
+    { token },
+  );
 }
 
 export async function getRelatorioById(relatorioId: number, token: string): Promise<Relatorio> {
@@ -56,3 +88,4 @@ export async function fecharRelatorio(relatorioId: number, token: string): Promi
     token,
   });
 }
+

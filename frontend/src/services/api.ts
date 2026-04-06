@@ -1,11 +1,26 @@
-﻿const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+﻿import { emitAuthRequired } from "./authEvents";
+
+const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+type ApiErrorCode =
+  | "AUTH_REQUIRED"
+  | "TOKEN_EXPIRED"
+  | "TOKEN_INVALID"
+  | "FORBIDDEN_ITEM_OWNER"
+  | "REPORT_CLOSED"
+  | "VALIDATION_ERROR"
+  | "INVALID_CREDENTIALS"
+  | "INTERNAL_ERROR"
+  | string;
 
 export class ApiError extends Error {
   status: number;
+  code?: ApiErrorCode;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: ApiErrorCode) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -13,6 +28,11 @@ type RequestConfig = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   token?: string | null;
+};
+
+type ErrorResponseBody = {
+  message?: string;
+  code?: ApiErrorCode;
 };
 
 export async function apiRequest<T>(path: string, config: RequestConfig = {}): Promise<T> {
@@ -39,19 +59,29 @@ export async function apiRequest<T>(path: string, config: RequestConfig = {}): P
   });
 
   if (!response.ok) {
-    let message = "Erro na requisicao";
+    let message = "Erro na requisição";
+    let code: ApiErrorCode | undefined;
 
     try {
-      const errorBody = (await response.json()) as { message?: string };
+      const errorBody = (await response.json()) as ErrorResponseBody;
       if (errorBody.message) {
         message = errorBody.message;
       }
+      code = errorBody.code;
     } catch {
       // noop
     }
 
-    throw new ApiError(message, response.status);
+    if (response.status === 401) {
+      emitAuthRequired({
+        reason: code === "TOKEN_EXPIRED" ? "expired" : "unauthorized",
+        message,
+      });
+    }
+
+    throw new ApiError(message, response.status, code);
   }
 
   return (await response.json()) as T;
 }
+

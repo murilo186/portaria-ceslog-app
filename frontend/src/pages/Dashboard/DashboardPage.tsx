@@ -1,4 +1,5 @@
 ﻿import { getAuthSession } from "../../services/authStorage";
+import { getUserErrorMessage } from "../../services/errorService";
 import { getRelatorioHoje } from "../../services/relatorioService";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -25,8 +26,7 @@ export default function DashboardPage() {
       await getRelatorioHoje(auth.token);
       navigate("/relatorio");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Nao foi possivel abrir o relatorio";
-      setErrorMessage(message);
+      setErrorMessage(getUserErrorMessage(error, "Não foi possível abrir o relatório"));
     } finally {
       setIsLoading(false);
     }
@@ -36,43 +36,42 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-text-900">Dashboard</h1>
-        <p className="text-sm text-text-700">Acompanhe e continue o relatorio diario da portaria.</p>
+        <p className="text-sm text-text-700">Acompanhe e continue o relatório diário da portaria.</p>
         {errorMessage ? <p className="mt-2 text-sm text-red-600">{errorMessage}</p> : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-text-900">Novo relatorio</h2>
-            <p className="mt-1 text-sm text-text-700">Cria o relatorio do dia se ainda nao existir.</p>
+            <h2 className="text-lg font-semibold text-text-900">Novo relatório</h2>
+            <p className="mt-1 text-sm text-text-700">Cria o relatório do dia se ainda não existir.</p>
           </div>
           <Button onClick={() => void handleOpenRelatorio()} disabled={isLoading}>
-            {isLoading ? "Abrindo..." : "Novo relatorio"}
+            {isLoading ? "Abrindo..." : "Novo relatório"}
           </Button>
         </Card>
 
         <Card className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-text-900">Continuar relatorio do dia</h2>
+            <h2 className="text-lg font-semibold text-text-900">Continuar relatório do dia</h2>
             <p className="mt-1 text-sm text-text-700">
-              Retoma o relatorio diario existente para seguir com os lancamentos.
+              Retoma o relatório diário existente para seguir com os lançamentos.
             </p>
           </div>
           <Button variant="secondary" onClick={() => void handleOpenRelatorio()} disabled={isLoading}>
-            Continuar relatorio do dia
+            Continuar relatório do dia
           </Button>
         </Card>
 
         <Card className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-text-900">Registros por data</h2>
-            <p className="mt-1 text-sm text-text-700">Lista os relatorios fechados e permite abrir o detalhe.</p>
+            <p className="mt-1 text-sm text-text-700">Lista os relatórios fechados e permite abrir o detalhe.</p>
           </div>
-          <Button variant="secondary" onClick={() => navigate("/registros")}>
-            Ver registros
-          </Button>
+          <Button variant="secondary" onClick={() => navigate("/registros")}>Ver registros</Button>
         </Card>
       </div>
     </div>
   );
 }
+

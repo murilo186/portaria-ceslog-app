@@ -6,13 +6,16 @@
   updateRelatorioItem,
 } from "../../services/relatorioService";
 import { getAuthSession } from "../../services/authStorage";
-import { useEffect, useState, type FormEvent } from "react";
+import { getUserErrorMessage } from "../../services/errorService";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
+import StatusBadge from "../../components/StatusBadge";
 import type { RelatorioItem, RelatorioItemEditableFields } from "../../types/relatorio";
 import type { Usuario } from "../../types/usuario";
+import { formatPlacaInput, normalizeRelatorioPayload, validateRelatorioPayload } from "../../utils/relatorioForm";
 
 const initialFormValues: RelatorioItemEditableFields = {
   empresa: "",
@@ -21,6 +24,11 @@ const initialFormValues: RelatorioItemEditableFields = {
   horaEntrada: "",
   horaSaida: "",
   observacoes: "",
+};
+
+type FeedbackState = {
+  type: "success" | "error";
+  message: string;
 };
 
 function getCurrentTime() {
@@ -44,6 +52,7 @@ function getAutorLabel(item: RelatorioItem, fallbackUser: Usuario | null): strin
 
 export default function RelatorioPage() {
   const navigate = useNavigate();
+
   const [itens, setItens] = useState<RelatorioItem[]>([]);
   const [relatorioId, setRelatorioId] = useState<number | null>(null);
   const [relatorioStatus, setRelatorioStatus] = useState<"ABERTO" | "FECHADO">("ABERTO");
@@ -58,7 +67,7 @@ export default function RelatorioPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   useEffect(() => {
     const auth = getAuthSession();
@@ -81,8 +90,10 @@ export default function RelatorioPage() {
         setRelatorioStatus(relatorio.status);
         setItens(relatorio.itens);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Erro ao carregar relatorio";
-        setErrorMessage(message);
+        setFeedback({
+          type: "error",
+          message: getUserErrorMessage(error, "Erro ao carregar relatório"),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -91,33 +102,83 @@ export default function RelatorioPage() {
     void loadRelatorio();
   }, [navigate]);
 
+  const isReadOnly = relatorioStatus === "FECHADO";
+
+  const sortedItens = useMemo(() => {
+    return [...itens].sort((a, b) => b.id - a.id);
+  }, [itens]);
+
   const resetCreateForm = () => {
     setFormValues(initialFormValues);
+  };
+
+  const canManageItem = (item: RelatorioItem): boolean => {
+    if (!usuarioLogado) {
+      return false;
+    }
+
+    if (usuarioLogado.perfil === "ADMIN") {
+      return true;
+    }
+
+    return item.usuarioId === usuarioLogado.id;
+  };
+
+  const applyCurrentTime = (field: "horaEntrada" | "horaSaida", mode: "create" | "edit") => {
+    const currentTime = getCurrentTime();
+
+    if (mode === "create") {
+      setFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
+      return;
+    }
+
+    setEditFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
   };
 
   const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
+    if (!token || !relatorioId || isReadOnly) {
+      return;
+    }
+
+    const normalizedPayload = normalizeRelatorioPayload(formValues);
+    const errors = validateRelatorioPayload(normalizedPayload);
+
+    if (errors.length > 0) {
+      setFeedback({ type: "error", message: errors.join(" ") });
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setFeedback(null);
 
     try {
-      const createdItem = await createRelatorioItem(relatorioId, formValues, token);
+      const createdItem = await createRelatorioItem(relatorioId, normalizedPayload, token);
       setItens((prevItens) => [createdItem, ...prevItens]);
       resetCreateForm();
+      setFeedback({ type: "success", message: "Registro adicionado com sucesso." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao criar item";
-      setErrorMessage(message);
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Erro ao criar item"),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleOpenEditModal = (item: RelatorioItem) => {
+    if (isReadOnly) {
+      setFeedback({ type: "error", message: "Relatório fechado. Edição indisponível." });
+      return;
+    }
+
+    if (!canManageItem(item)) {
+      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
+      return;
+    }
+
     setEditingItemId(item.id);
     setEditFormValues({
       empresa: item.empresa,
@@ -139,54 +200,73 @@ export default function RelatorioPage() {
   const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!token || !relatorioId || editingItemId === null || relatorioStatus === "FECHADO") {
+    if (!token || !relatorioId || editingItemId === null || isReadOnly) {
+      return;
+    }
+
+    const normalizedPayload = normalizeRelatorioPayload(editFormValues);
+    const errors = validateRelatorioPayload(normalizedPayload);
+
+    if (errors.length > 0) {
+      setFeedback({ type: "error", message: errors.join(" ") });
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setFeedback(null);
 
     try {
-      const updatedItem = await updateRelatorioItem(relatorioId, editingItemId, editFormValues, token);
+      const updatedItem = await updateRelatorioItem(relatorioId, editingItemId, normalizedPayload, token);
       setItens((prevItens) => prevItens.map((item) => (item.id === editingItemId ? updatedItem : item)));
       handleCloseEditModal();
+      setFeedback({ type: "success", message: "Registro atualizado com sucesso." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao atualizar item";
-      setErrorMessage(message);
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Erro ao atualizar item"),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
+  const handleDelete = async (item: RelatorioItem) => {
+    if (!token || !relatorioId || isReadOnly) {
+      return;
+    }
+
+    if (!canManageItem(item)) {
+      setFeedback({ type: "error", message: "Você só pode excluir registros da sua autoria." });
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setFeedback(null);
 
     try {
-      await deleteRelatorioItem(relatorioId, id, token);
-      setItens((prevItens) => prevItens.filter((item) => item.id !== id));
-      if (editingItemId === id) {
+      await deleteRelatorioItem(relatorioId, item.id, token);
+      setItens((prevItens) => prevItens.filter((currentItem) => currentItem.id !== item.id));
+      if (editingItemId === item.id) {
         handleCloseEditModal();
       }
+      setFeedback({ type: "success", message: "Registro excluído com sucesso." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao excluir item";
-      setErrorMessage(message);
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Erro ao excluir item"),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCloseRelatorio = async () => {
-    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
+    if (!token || !relatorioId || isReadOnly) {
       return;
     }
 
     const shouldClose = window.confirm(
-      "Tem certeza que deseja fechar o relatorio? Depois disso, ele ficara somente leitura.",
+      "Tem certeza que deseja fechar o relatório? Depois disso ele ficará somente leitura.",
     );
 
     if (!shouldClose) {
@@ -194,36 +274,27 @@ export default function RelatorioPage() {
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setFeedback(null);
 
     try {
       const closed = await fecharRelatorio(relatorioId, token);
       setRelatorioStatus(closed.status);
+      setFeedback({ type: "success", message: "Relatório fechado com sucesso." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao fechar relatorio";
-      setErrorMessage(message);
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Erro ao fechar relatório"),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-  const applyCurrentTime = (field: "horaEntrada" | "horaSaida", mode: "create" | "edit") => {
-    const currentTime = getCurrentTime();
-
-    if (mode === "create") {
-      setFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
-      return;
-    }
-
-    setEditFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
-  };
-
-  const isReadOnly = relatorioStatus === "FECHADO";
 
   return (
     <>
       <div className="space-y-5 sm:space-y-6">
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(-1)}>
               Voltar
             </Button>
@@ -233,16 +304,22 @@ export default function RelatorioPage() {
               onClick={() => void handleCloseRelatorio()}
               disabled={isSubmitting || isLoading || isReadOnly}
             >
-              {isReadOnly ? "Relatorio fechado" : "Fechar relatorio"}
+              {isReadOnly ? "Relatório fechado" : "Fechar relatório"}
             </Button>
+            <StatusBadge status={relatorioStatus} />
           </div>
-          <h1 className="text-2xl font-semibold text-text-900">Relatorio do Dia</h1>
+
+          <h1 className="text-2xl font-semibold text-text-900">Relatório do Dia</h1>
           <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
-          <p className="text-xs text-text-700">Status do relatorio: {relatorioStatus}</p>
           <p className="text-xs text-text-700">Turno aplicado automaticamente: {turnoAtual}</p>
-          {usuarioLogado ? <p className="text-xs text-text-700">Autor automatico: {usuarioLogado.nome}</p> : null}
-          {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatorio fechado: somente leitura.</p> : null}
-          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+          {usuarioLogado ? <p className="text-xs text-text-700">Autor automático: {usuarioLogado.nome}</p> : null}
+          {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatório fechado: somente leitura.</p> : null}
+
+          {feedback ? (
+            <p className={`text-sm ${feedback.type === "error" ? "text-red-600" : "text-emerald-700"}`}>
+              {feedback.message}
+            </p>
+          ) : null}
         </div>
 
         <Card>
@@ -254,17 +331,19 @@ export default function RelatorioPage() {
               onChange={(event) => setFormValues((prev) => ({ ...prev, empresa: event.target.value }))}
               placeholder="Nome da empresa"
               required
+              disabled={isReadOnly}
             />
 
             <Input
               id="placaVeiculo"
-              label="Placa do veiculo"
+              label="Placa do veículo"
               value={formValues.placaVeiculo}
               onChange={(event) =>
-                setFormValues((prev) => ({ ...prev, placaVeiculo: event.target.value.toUpperCase() }))
+                setFormValues((prev) => ({ ...prev, placaVeiculo: formatPlacaInput(event.target.value) }))
               }
-              placeholder="ABC1D23"
+              placeholder="ABC-1D23"
               required
+              disabled={isReadOnly}
             />
 
             <Input
@@ -274,6 +353,7 @@ export default function RelatorioPage() {
               onChange={(event) => setFormValues((prev) => ({ ...prev, nome: event.target.value }))}
               placeholder="Nome da pessoa"
               required
+              disabled={isReadOnly}
             />
 
             <div className="flex w-full flex-col gap-1.5">
@@ -287,14 +367,23 @@ export default function RelatorioPage() {
                   value={formValues.horaEntrada ?? ""}
                   onChange={(event) => setFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))}
                   className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
                 />
-                <Button type="button" variant="secondary" className="shrink-0 px-3 py-2 text-xs" onClick={() => applyCurrentTime("horaEntrada", "create")}>Agora</Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0 px-3 py-2 text-xs"
+                  onClick={() => applyCurrentTime("horaEntrada", "create")}
+                  disabled={isReadOnly}
+                >
+                  Agora
+                </Button>
               </div>
             </div>
 
             <div className="flex w-full flex-col gap-1.5">
               <label htmlFor="horaSaida" className="text-sm font-medium text-text-700">
-                Hora de saida
+                Hora de saída
               </label>
               <div className="flex gap-2">
                 <input
@@ -303,14 +392,23 @@ export default function RelatorioPage() {
                   value={formValues.horaSaida ?? ""}
                   onChange={(event) => setFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
                   className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
                 />
-                <Button type="button" variant="secondary" className="shrink-0 px-3 py-2 text-xs" onClick={() => applyCurrentTime("horaSaida", "create")}>Agora</Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0 px-3 py-2 text-xs"
+                  onClick={() => applyCurrentTime("horaSaida", "create")}
+                  disabled={isReadOnly}
+                >
+                  Agora
+                </Button>
               </div>
             </div>
 
-            <div className="sm:col-span-2 flex w-full flex-col gap-1.5">
+            <div className="flex w-full flex-col gap-1.5 sm:col-span-2">
               <label htmlFor="observacoes" className="text-sm font-medium text-text-700">
-                Observacoes
+                Observações
               </label>
               <textarea
                 id="observacoes"
@@ -318,13 +416,14 @@ export default function RelatorioPage() {
                 onChange={(event) => setFormValues((prev) => ({ ...prev, observacoes: event.target.value }))}
                 rows={3}
                 className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                placeholder="Informacoes adicionais"
+                placeholder="Informações adicionais"
+                disabled={isReadOnly}
               />
             </div>
 
-            <div className="sm:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center">
               <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isLoading || isReadOnly}>
-                {isReadOnly ? "Relatorio fechado" : "Adicionar registro"}
+                {isReadOnly ? "Relatório fechado" : "Adicionar registro"}
               </Button>
             </div>
           </form>
@@ -332,26 +431,54 @@ export default function RelatorioPage() {
 
         <div className="space-y-3 md:hidden">
           {isLoading ? (
-            <Card><p className="text-sm text-text-700">Carregando...</p></Card>
-          ) : itens.length === 0 ? (
-            <Card><p className="text-sm text-text-700">Nenhum registro adicionado ate o momento.</p></Card>
+            <Card>
+              <p className="text-sm text-text-700">Carregando...</p>
+            </Card>
+          ) : sortedItens.length === 0 ? (
+            <Card>
+              <p className="text-sm text-text-700">Nenhum registro adicionado até o momento.</p>
+            </Card>
           ) : (
-            itens.map((item) => (
-              <Card key={item.id} className="space-y-2">
-                <p className="text-sm font-semibold text-text-900">{item.nome}</p>
-                <p className="text-sm text-text-700">Empresa: {item.empresa}</p>
-                <p className="text-sm text-text-700">Placa: {item.placaVeiculo}</p>
-                <p className="text-sm text-text-700">Entrada: {item.horaEntrada ?? "-"}</p>
-                <p className="text-sm text-text-700">Saida: {item.horaSaida ?? "-"}</p>
-                <p className="text-sm text-text-700">Turno: {item.turno ?? "-"}</p>
-                <p className="text-sm text-text-700">Autor: {getAutorLabel(item, usuarioLogado)}</p>
-                <p className="text-sm text-text-700">Obs: {item.observacoes ?? "-"}</p>
-                <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="secondary" className="flex-1" onClick={() => handleOpenEditModal(item)} disabled={isSubmitting || isReadOnly}>Editar</Button>
-                  <Button type="button" className="flex-1" onClick={() => void handleDelete(item.id)} disabled={isSubmitting || isReadOnly}>Excluir</Button>
-                </div>
-              </Card>
-            ))
+            sortedItens.map((item) => {
+              const canManage = canManageItem(item) && !isReadOnly;
+
+              return (
+                <Card key={item.id} className="space-y-2">
+                  <p className="text-sm font-semibold text-text-900">{item.nome}</p>
+                  <p className="text-sm text-text-700">Empresa: {item.empresa}</p>
+                  <p className="text-sm text-text-700">Placa: {item.placaVeiculo}</p>
+                  <p className="text-sm text-text-700">Entrada: {item.horaEntrada ?? "-"}</p>
+                  <p className="text-sm text-text-700">Saída: {item.horaSaida ?? "-"}</p>
+                  <p className="text-sm text-text-700">Turno: {item.turno ?? "-"}</p>
+                  <p className="text-sm text-text-700">Autor: {getAutorLabel(item, usuarioLogado)}</p>
+                  <p className="text-sm text-text-700">Obs.: {item.observacoes ?? "-"}</p>
+
+                  {canManage ? (
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => handleOpenEditModal(item)}
+                        disabled={isSubmitting}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        onClick={() => void handleDelete(item)}
+                        disabled={isSubmitting}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="pt-1 text-xs text-text-700">Somente autor/admin pode editar este item.</p>
+                  )}
+                </Card>
+              );
+            })
           )}
         </div>
 
@@ -364,37 +491,68 @@ export default function RelatorioPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Placa</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Entrada</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saida</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Saída</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Turno</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Autor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Observacoes</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Acoes</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Observações</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-700">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-200 bg-white">
                 {isLoading ? (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">Carregando...</td></tr>
-                ) : itens.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">Nenhum registro adicionado ate o momento.</td></tr>
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">
+                      Carregando...
+                    </td>
+                  </tr>
+                ) : sortedItens.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-700">
+                      Nenhum registro adicionado até o momento.
+                    </td>
+                  </tr>
                 ) : (
-                  itens.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.empresa}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.placaVeiculo}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.nome}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.horaEntrada ?? "-"}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.horaSaida ?? "-"}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.turno ?? "-"}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{getAutorLabel(item, usuarioLogado)}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">{item.observacoes ?? "-"}</td>
-                      <td className="px-4 py-3 text-sm text-text-900">
-                        <div className="flex items-center gap-2">
-                          <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => handleOpenEditModal(item)} disabled={isSubmitting || isReadOnly}>Editar</Button>
-                          <Button type="button" className="px-3 py-1.5 text-xs" onClick={() => void handleDelete(item.id)} disabled={isSubmitting || isReadOnly}>Excluir</Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  sortedItens.map((item) => {
+                    const canManage = canManageItem(item) && !isReadOnly;
+
+                    return (
+                      <tr key={item.id}>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.empresa}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.placaVeiculo}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.nome}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.horaEntrada ?? "-"}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.horaSaida ?? "-"}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.turno ?? "-"}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{getAutorLabel(item, usuarioLogado)}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">{item.observacoes ?? "-"}</td>
+                        <td className="px-4 py-3 text-sm text-text-900">
+                          {canManage ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="px-3 py-1.5 text-xs"
+                                onClick={() => handleOpenEditModal(item)}
+                                disabled={isSubmitting}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                type="button"
+                                className="px-3 py-1.5 text-xs"
+                                onClick={() => void handleDelete(item)}
+                                disabled={isSubmitting}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-text-700">Sem permissão</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -407,38 +565,118 @@ export default function RelatorioPage() {
           <div className="w-full max-w-2xl rounded-lg border border-surface-200 bg-white p-5 sm:p-6">
             <div className="mb-4 space-y-1">
               <h2 className="text-lg font-semibold text-text-900">Editar registro</h2>
-              <p className="text-sm text-text-700">Atualize os dados e salve as alteracoes.</p>
+              <p className="text-sm text-text-700">Atualize os dados e salve as alterações.</p>
             </div>
 
             <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleEditSubmit}>
-              <Input id="edit-empresa" label="Empresa" value={editFormValues.empresa ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, empresa: e.target.value }))} required />
-              <Input id="edit-placaVeiculo" label="Placa do veiculo" value={editFormValues.placaVeiculo ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, placaVeiculo: e.target.value.toUpperCase() }))} required />
-              <Input id="edit-nome" label="Nome" value={editFormValues.nome ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, nome: e.target.value }))} required />
+              <Input
+                id="edit-empresa"
+                label="Empresa"
+                value={editFormValues.empresa ?? ""}
+                onChange={(event) => setEditFormValues((prev) => ({ ...prev, empresa: event.target.value }))}
+                required
+                disabled={isReadOnly}
+              />
+              <Input
+                id="edit-placaVeiculo"
+                label="Placa do veículo"
+                value={editFormValues.placaVeiculo ?? ""}
+                onChange={(event) =>
+                  setEditFormValues((prev) => ({ ...prev, placaVeiculo: formatPlacaInput(event.target.value) }))
+                }
+                required
+                disabled={isReadOnly}
+              />
+              <Input
+                id="edit-nome"
+                label="Nome"
+                value={editFormValues.nome ?? ""}
+                onChange={(event) => setEditFormValues((prev) => ({ ...prev, nome: event.target.value }))}
+                required
+                disabled={isReadOnly}
+              />
 
               <div className="flex w-full flex-col gap-1.5">
-                <label htmlFor="edit-horaEntrada" className="text-sm font-medium text-text-700">Hora de entrada</label>
+                <label htmlFor="edit-horaEntrada" className="text-sm font-medium text-text-700">
+                  Hora de entrada
+                </label>
                 <div className="flex gap-2">
-                  <input id="edit-horaEntrada" type="time" value={editFormValues.horaEntrada ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, horaEntrada: e.target.value }))} className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" />
-                  <Button type="button" variant="secondary" className="shrink-0 px-3 py-2 text-xs" onClick={() => applyCurrentTime("horaEntrada", "edit")}>Agora</Button>
+                  <input
+                    id="edit-horaEntrada"
+                    type="time"
+                    value={editFormValues.horaEntrada ?? ""}
+                    onChange={(event) =>
+                      setEditFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))
+                    }
+                    className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    disabled={isReadOnly}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="shrink-0 px-3 py-2 text-xs"
+                    onClick={() => applyCurrentTime("horaEntrada", "edit")}
+                    disabled={isReadOnly}
+                  >
+                    Agora
+                  </Button>
                 </div>
               </div>
 
               <div className="flex w-full flex-col gap-1.5">
-                <label htmlFor="edit-horaSaida" className="text-sm font-medium text-text-700">Hora de saida</label>
+                <label htmlFor="edit-horaSaida" className="text-sm font-medium text-text-700">
+                  Hora de saída
+                </label>
                 <div className="flex gap-2">
-                  <input id="edit-horaSaida" type="time" value={editFormValues.horaSaida ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, horaSaida: e.target.value }))} className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" />
-                  <Button type="button" variant="secondary" className="shrink-0 px-3 py-2 text-xs" onClick={() => applyCurrentTime("horaSaida", "edit")}>Agora</Button>
+                  <input
+                    id="edit-horaSaida"
+                    type="time"
+                    value={editFormValues.horaSaida ?? ""}
+                    onChange={(event) => setEditFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
+                    className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    disabled={isReadOnly}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="shrink-0 px-3 py-2 text-xs"
+                    onClick={() => applyCurrentTime("horaSaida", "edit")}
+                    disabled={isReadOnly}
+                  >
+                    Agora
+                  </Button>
                 </div>
               </div>
 
-              <div className="sm:col-span-2 flex w-full flex-col gap-1.5">
-                <label htmlFor="edit-observacoes" className="text-sm font-medium text-text-700">Observacoes</label>
-                <textarea id="edit-observacoes" value={editFormValues.observacoes ?? ""} onChange={(e) => setEditFormValues((p) => ({ ...p, observacoes: e.target.value }))} rows={3} className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" />
+              <div className="flex w-full flex-col gap-1.5 sm:col-span-2">
+                <label htmlFor="edit-observacoes" className="text-sm font-medium text-text-700">
+                  Observações
+                </label>
+                <textarea
+                  id="edit-observacoes"
+                  value={editFormValues.observacoes ?? ""}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({ ...prev, observacoes: event.target.value }))
+                  }
+                  rows={3}
+                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
+                />
               </div>
 
-              <div className="sm:col-span-2 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={handleCloseEditModal} disabled={isSubmitting || isReadOnly}>Cancelar</Button>
-                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isReadOnly}>Salvar alteracoes</Button>
+              <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={handleCloseEditModal}
+                  disabled={isSubmitting || isReadOnly}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isReadOnly}>
+                  Salvar alterações
+                </Button>
               </div>
             </form>
           </div>
@@ -447,5 +685,8 @@ export default function RelatorioPage() {
     </>
   );
 }
+
+
+
 
 
