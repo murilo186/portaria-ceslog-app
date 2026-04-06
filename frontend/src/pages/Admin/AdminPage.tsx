@@ -1,13 +1,34 @@
-import { getAuthSession } from "../../services/authStorage";
-import { ApiError } from "../../services/api";
+﻿import { getAuthSession } from "../../services/authStorage";
 import { getUserErrorMessage } from "../../services/errorService";
-import { getRelatorioAberto, listRelatoriosFechados } from "../../services/relatorioService";
-import { useEffect, useState } from "react";
+import { listRelatoriosFechados } from "../../services/relatorioService";
+import { createUsuario, deleteUsuario, listUsuarios } from "../../services/usuarioService";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import StatusBadge from "../../components/StatusBadge";
-import type { Relatorio, RelatorioResumo } from "../../types/relatorio";
+import IconActionButton from "../../components/IconActionButton";
+import Input from "../../components/Input";
+import type { RelatorioResumo } from "../../types/relatorio";
+import type { TurnoUsuario, UsuarioAdminListItem } from "../../types/usuario";
+
+type Feedback = {
+  type: "error" | "success";
+  message: string;
+};
+
+type NovoUsuarioForm = {
+  nome: string;
+  usuario: string;
+  senha: string;
+  turno: TurnoUsuario;
+};
+
+const initialNovoUsuarioForm: NovoUsuarioForm = {
+  nome: "",
+  usuario: "",
+  senha: "",
+  turno: "MANHA",
+};
 
 function formatDate(dateIso: string): string {
   const iso = dateIso.slice(0, 10);
@@ -18,15 +39,18 @@ function formatDate(dateIso: string): string {
 export default function AdminPage() {
   const navigate = useNavigate();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [openReport, setOpenReport] = useState<Relatorio | null>(null);
-  const [closedReportsCount, setClosedReportsCount] = useState(0);
+  const [isLoadingRegistros, setIsLoadingRegistros] = useState(true);
+  const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(true);
+  const [isSubmittingUsuario, setIsSubmittingUsuario] = useState(false);
+
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [latestClosedReports, setLatestClosedReports] = useState<RelatorioResumo[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioAdminListItem[]>([]);
+  const [novoUsuarioForm, setNovoUsuarioForm] = useState<NovoUsuarioForm>(initialNovoUsuarioForm);
+
+  const auth = useMemo(() => getAuthSession(), []);
 
   useEffect(() => {
-    const auth = getAuthSession();
-
     if (!auth) {
       navigate("/");
       return;
@@ -42,38 +66,104 @@ export default function AdminPage() {
 
     const authSession = auth;
 
-    async function loadAdminSummary() {
-      setIsLoading(true);
-      setErrorMessage(null);
+    async function loadRegistros() {
+      setIsLoadingRegistros(true);
 
       try {
-        let currentOpenReport: Relatorio | null = null;
-
-        try {
-          currentOpenReport = await getRelatorioAberto(authSession.token);
-        } catch (error) {
-          if (!(error instanceof ApiError && error.status === 404)) {
-            throw error;
-          }
-        }
-
         const closedResponse = await listRelatoriosFechados(authSession.token, {
           page: 1,
-          pageSize: 5,
+          pageSize: 6,
         });
 
-        setOpenReport(currentOpenReport);
-        setClosedReportsCount(closedResponse.meta.total);
         setLatestClosedReports(closedResponse.data);
       } catch (error) {
-        setErrorMessage(getUserErrorMessage(error, "Nao foi possivel carregar os dados administrativos."));
+        setFeedback({
+          type: "error",
+          message: getUserErrorMessage(error, "Nao foi possivel carregar os registros."),
+        });
       } finally {
-        setIsLoading(false);
+        setIsLoadingRegistros(false);
       }
     }
 
-    void loadAdminSummary();
-  }, [navigate]);
+    async function loadUsuarios() {
+      setIsLoadingUsuarios(true);
+
+      try {
+        const data = await listUsuarios(authSession.token);
+        setUsuarios(data);
+      } catch (error) {
+        setFeedback({
+          type: "error",
+          message: getUserErrorMessage(error, "Nao foi possivel carregar os usuarios."),
+        });
+      } finally {
+        setIsLoadingUsuarios(false);
+      }
+    }
+
+    void loadRegistros();
+    void loadUsuarios();
+  }, [auth, navigate]);
+
+  const handleCreateUsuario = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!auth) {
+      navigate("/");
+      return;
+    }
+
+    const authSession = auth;
+
+    setIsSubmittingUsuario(true);
+    setFeedback(null);
+
+    try {
+      const payload = {
+        nome: novoUsuarioForm.nome.trim(),
+        usuario: novoUsuarioForm.usuario.trim().toLowerCase(),
+        senha: novoUsuarioForm.senha,
+        turno: novoUsuarioForm.turno,
+      };
+
+      const created = await createUsuario(payload, authSession.token);
+      setUsuarios((prev) => [created, ...prev]);
+      setNovoUsuarioForm(initialNovoUsuarioForm);
+      setFeedback({ type: "success", message: "Usuario criado com sucesso." });
+    } catch (error) {
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel criar usuario.") });
+    } finally {
+      setIsSubmittingUsuario(false);
+    }
+  };
+
+  const handleDeleteUsuario = async (usuarioId: number) => {
+    if (!auth) {
+      navigate("/");
+      return;
+    }
+
+    const authSession = auth;
+    const shouldDelete = window.confirm("Confirma a exclusao deste usuario?");
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setIsSubmittingUsuario(true);
+    setFeedback(null);
+
+    try {
+      await deleteUsuario(usuarioId, authSession.token);
+      setUsuarios((prev) => prev.map((item) => (item.id === usuarioId ? { ...item, ativo: false } : item)));
+      setFeedback({ type: "success", message: "Usuario desativado com sucesso." });
+    } catch (error) {
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel excluir usuario.") });
+    } finally {
+      setIsSubmittingUsuario(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -82,52 +172,136 @@ export default function AdminPage() {
           Voltar
         </Button>
         <h1 className="text-2xl font-semibold text-text-900">Administracao</h1>
-        <p className="text-sm text-text-700">Visao geral operacional e acesso as funcionalidades de gestao.</p>
-        {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+        <p className="text-sm text-text-700">Gerenciamento de usuarios, historico de logs (futuro) e registros.</p>
+        {feedback ? (
+          <p className={`text-sm ${feedback.type === "error" ? "text-red-600" : "text-emerald-700"}`}>
+            {feedback.message}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="space-y-3">
-          <h2 className="text-base font-semibold text-text-900">Relatorio atual</h2>
-
-          {isLoading ? (
-            <p className="text-sm text-text-700">Carregando status...</p>
-          ) : openReport ? (
-            <>
-              <p className="text-sm text-text-700">Data: {formatDate(openReport.dataRelatorio)}</p>
-              <StatusBadge status={openReport.status} />
-            </>
-          ) : (
-            <p className="text-sm text-text-700">Nenhum relatorio em aberto no momento.</p>
-          )}
-
-          <Button type="button" variant="secondary" onClick={() => navigate("/relatorio")}>Continuar relatorio</Button>
+        <Card className="space-y-2">
+          <h2 className="text-base font-semibold text-text-900">Gerenciar usuarios</h2>
+          <p className="text-sm text-text-700">Cadastro e controle de acessos dos operadores.</p>
         </Card>
 
-        <Card className="space-y-3">
-          <h2 className="text-base font-semibold text-text-900">Historico fechado</h2>
-          {isLoading ? (
-            <p className="text-sm text-text-700">Carregando total...</p>
-          ) : (
-            <p className="text-sm text-text-700">Total de relatorios fechados: {closedReportsCount}</p>
-          )}
-          <Button type="button" variant="secondary" onClick={() => navigate("/registros")}>Abrir historico</Button>
+        <Card className="space-y-2">
+          <h2 className="text-base font-semibold text-text-900">Lista de registros</h2>
+          <p className="text-sm text-text-700">Acesse o historico completo de relatorios fechados.</p>
+          <Button type="button" variant="secondary" onClick={() => navigate("/registros")}>Abrir registros</Button>
         </Card>
 
-        <Card className="space-y-3 md:col-span-2 xl:col-span-1">
-          <h2 className="text-base font-semibold text-text-900">Atalhos administrativos</h2>
-          <p className="text-sm text-text-700">Use os atalhos para navegar rapidamente pelas areas principais.</p>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => navigate("/dashboard")}>Dashboard</Button>
-            <Button type="button" variant="secondary" onClick={() => navigate("/registros")}>Registros</Button>
+        <Card className="space-y-2">
+          <h2 className="text-base font-semibold text-text-900">Historico de logs</h2>
+          <p className="text-sm text-text-700">Funcionalidade planejada para auditoria administrativa.</p>
+          <Button type="button" variant="secondary" disabled>Em breve</Button>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card className="space-y-4 xl:col-span-1">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-text-900">Criar usuario</h2>
+            <p className="text-sm text-text-700">Campos obrigatorios: nome, usuario, senha e turno.</p>
           </div>
+
+          <form className="space-y-3" onSubmit={handleCreateUsuario}>
+            <Input
+              id="novo-nome"
+              label="Nome"
+              value={novoUsuarioForm.nome}
+              onChange={(event) => setNovoUsuarioForm((prev) => ({ ...prev, nome: event.target.value }))}
+              placeholder="Nome completo"
+              required
+            />
+
+            <Input
+              id="novo-usuario"
+              label="Usuario"
+              value={novoUsuarioForm.usuario}
+              onChange={(event) => setNovoUsuarioForm((prev) => ({ ...prev, usuario: event.target.value }))}
+              placeholder="usuario.exemplo"
+              required
+            />
+
+            <Input
+              id="nova-senha"
+              label="Senha"
+              type="password"
+              value={novoUsuarioForm.senha}
+              onChange={(event) => setNovoUsuarioForm((prev) => ({ ...prev, senha: event.target.value }))}
+              placeholder="Minimo 6 caracteres"
+              required
+            />
+
+            <div className="flex w-full flex-col gap-1.5">
+              <label htmlFor="novo-turno" className="text-sm font-medium text-text-700">
+                Turno
+              </label>
+              <select
+                id="novo-turno"
+                value={novoUsuarioForm.turno}
+                onChange={(event) =>
+                  setNovoUsuarioForm((prev) => ({ ...prev, turno: event.target.value as TurnoUsuario }))
+                }
+                className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              >
+                <option value="MANHA">MANHA</option>
+                <option value="TARDE">TARDE</option>
+              </select>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSubmittingUsuario || isLoadingUsuarios}>
+              {isSubmittingUsuario ? "Salvando..." : "Criar usuario"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="space-y-3 xl:col-span-2">
+          <h2 className="text-lg font-semibold text-text-900">Lista de usuarios</h2>
+
+          {isLoadingUsuarios ? (
+            <p className="text-sm text-text-700">Carregando...</p>
+          ) : usuarios.length === 0 ? (
+            <p className="text-sm text-text-700">Nenhum usuario encontrado.</p>
+          ) : (
+            <div className="space-y-2">
+              {usuarios.map((item) => {
+                const isCurrentUser = auth?.usuario.id === item.id;
+                const canDelete = item.ativo && item.perfil !== "ADMIN" && !isCurrentUser;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-2 rounded-md border border-surface-200 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-text-900">{item.nome}</p>
+                      <p className="text-xs text-text-700">Usuario: {item.usuario ?? "-"}</p>
+                      <p className="text-xs text-text-700">Turno: {item.turno ?? "-"}</p>
+                      <p className="text-xs text-text-700">Perfil: {item.perfil}</p>
+                      <p className="text-xs text-text-700">Status: {item.ativo ? "ATIVO" : "INATIVO"}</p>
+                    </div>
+
+                    <IconActionButton
+                      action="delete"
+                      label={item.ativo ? "Excluir usuario" : "Usuario inativo"}
+                      onClick={() => void handleDeleteUsuario(item.id)}
+                      disabled={!canDelete || isSubmittingUsuario}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
 
       <Card className="space-y-3">
-        <h2 className="text-base font-semibold text-text-900">Ultimos relatorios fechados</h2>
+        <h2 className="text-base font-semibold text-text-900">Ultimos registros fechados</h2>
 
-        {isLoading ? (
+        {isLoadingRegistros ? (
           <p className="text-sm text-text-700">Carregando lista...</p>
         ) : latestClosedReports.length === 0 ? (
           <p className="text-sm text-text-700">Ainda nao ha relatorios fechados.</p>

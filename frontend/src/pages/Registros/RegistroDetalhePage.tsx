@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
+import IconActionButton from "../../components/IconActionButton";
 import StatusBadge from "../../components/StatusBadge";
 import type { Relatorio } from "../../types/relatorio";
 import type { Usuario } from "../../types/usuario";
@@ -197,9 +198,7 @@ export default function RegistroDetalhePage() {
                     <td className="px-4 py-3 text-sm text-text-900">{getAutor(item, usuarioLogado)}</td>
                     {isAdmin ? (
                       <td className="px-4 py-3 text-sm text-text-900">
-                        <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs" disabled>
-                          Editar
-                        </Button>
+                        <IconActionButton action="edit" label="Editar registro" disabled />
                       </td>
                     ) : null}
                   </tr>

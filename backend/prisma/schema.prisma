@@ -12,6 +12,11 @@ enum PerfilUsuario {
   OPERADOR
 }
 
+enum TurnoUsuario {
+  MANHA
+  TARDE
+}
+
 enum StatusRelatorio {
   ABERTO
   FECHADO
@@ -29,10 +34,11 @@ enum PerfilPessoa {
 model Usuario {
   id              Int              @id @default(autoincrement())
   nome            String
-  email           String           @unique
+  usuario         String           @unique
+  email           String?          @unique
   senhaHash       String
   perfil          PerfilUsuario
-  turno           String?
+  turno           TurnoUsuario?
   ativo           Boolean          @default(true)
   criadoEm        DateTime         @default(now())
 

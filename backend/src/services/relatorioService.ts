@@ -13,6 +13,7 @@ function reportInclude() {
           select: {
             id: true,
             nome: true,
+            usuario: true,
             email: true,
             perfil: true,
             turno: true,
@@ -225,6 +226,7 @@ export async function getReportByIdService(relatorioId: number) {
             select: {
               id: true,
               nome: true,
+              usuario: true,
               email: true,
               perfil: true,
               turno: true,
@@ -289,6 +291,7 @@ export async function createRelatorioItemService(
         select: {
           id: true,
           nome: true,
+          usuario: true,
           email: true,
           perfil: true,
           turno: true,
@@ -307,6 +310,7 @@ async function getManagedItem(relatorioId: number, itemId: number) {
         select: {
           id: true,
           nome: true,
+          usuario: true,
           email: true,
           perfil: true,
           turno: true,
@@ -361,6 +365,7 @@ export async function updateRelatorioItemService(
         select: {
           id: true,
           nome: true,
+          usuario: true,
           email: true,
           perfil: true,
           turno: true,

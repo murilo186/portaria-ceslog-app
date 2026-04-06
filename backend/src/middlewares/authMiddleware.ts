@@ -19,6 +19,7 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
       id: payload.sub,
       perfil: payload.perfil,
       nome: payload.nome,
+      usuario: payload.usuario,
       email: payload.email,
       turno: payload.turno,
     };

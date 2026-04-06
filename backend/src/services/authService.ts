@@ -4,9 +4,15 @@ import type { LoginInput } from "../types/auth";
 import { AppError } from "../middlewares/errorMiddleware";
 import bcrypt from "bcryptjs";
 
+function normalizeUsuario(value: string): string {
+  return value.trim();
+}
+
 export async function loginService(input: LoginInput) {
-  const usuario = await prisma.usuario.findUnique({
-    where: { email: input.email.toLowerCase().trim() },
+  const usuarioInformado = normalizeUsuario(input.usuario).toLowerCase();
+
+  const usuario = await prisma.usuario.findFirst({
+    where: { usuario: usuarioInformado },
   });
 
   if (!usuario || !usuario.ativo) {
@@ -23,6 +29,7 @@ export async function loginService(input: LoginInput) {
     sub: usuario.id,
     perfil: usuario.perfil,
     nome: usuario.nome,
+    usuario: usuario.usuario,
     email: usuario.email,
     turno: usuario.turno,
   });
@@ -32,6 +39,7 @@ export async function loginService(input: LoginInput) {
     usuario: {
       id: usuario.id,
       nome: usuario.nome,
+      usuario: usuario.usuario,
       email: usuario.email,
       perfil: usuario.perfil,
       turno: usuario.turno,

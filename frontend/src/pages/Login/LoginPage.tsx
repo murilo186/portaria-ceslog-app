@@ -15,7 +15,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState("");
+  const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,7 +24,8 @@ export default function LoginPage() {
     const auth = getAuthSession();
 
     if (auth) {
-      navigate("/dashboard", { replace: true });
+      const target = auth.usuario.perfil === "ADMIN" ? "/admin" : "/dashboard";
+      navigate(target, { replace: true });
     }
   }, [navigate]);
 
@@ -36,9 +37,10 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await login({ email, senha });
+      const response = await login({ usuario, senha });
       saveAuthSession({ token: response.token, usuario: response.usuario });
-      navigate("/dashboard", { replace: true });
+      const target = response.usuario.perfil === "ADMIN" ? "/admin" : "/dashboard";
+      navigate(target, { replace: true });
     } catch (error) {
       const message = getUserErrorMessage(error, "Não foi possível fazer login");
       setErrorMessage(message);
@@ -57,18 +59,18 @@ export default function LoginPage() {
         <Card className="w-full p-6 sm:p-8">
           <div className="mb-6 space-y-1">
             <h1 className="text-2xl font-semibold text-text-900">Acesso ao sistema</h1>
-            <p className="text-sm text-text-700">Entre com seu e-mail e senha para continuar.</p>
+            <p className="text-sm text-text-700">Entre com seu usuario e senha para continuar.</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
-              id="email"
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="seu.nome@empresa.com"
-              autoComplete="email"
+              id="usuario"
+              label="Usuario"
+              type="text"
+              value={usuario}
+              onChange={(event) => setUsuario(event.target.value)}
+              placeholder="Digite seu usuario"
+              autoComplete="username"
               required
             />
 

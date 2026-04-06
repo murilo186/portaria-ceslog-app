@@ -1,13 +1,13 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const findUniqueMock = vi.fn();
+const findFirstMock = vi.fn();
 const compareMock = vi.fn();
 const signTokenMock = vi.fn();
 
 vi.mock("../src/lib/prisma", () => ({
   prisma: {
     usuario: {
-      findUnique: (...args: unknown[]) => findUniqueMock(...args),
+      findFirst: (...args: unknown[]) => findFirstMock(...args),
     },
   },
 }));
@@ -30,18 +30,19 @@ describe("loginService", () => {
   });
 
   it("retorna erro 401 para credenciais inválidas", async () => {
-    findUniqueMock.mockResolvedValue(null);
+    findFirstMock.mockResolvedValue(null);
 
-    await expect(loginService({ email: "x@x.com", senha: "123" })).rejects.toMatchObject({
+    await expect(loginService({ usuario: "x", senha: "123" })).rejects.toMatchObject({
       statusCode: 401,
       code: "INVALID_CREDENTIALS",
     });
   });
 
   it("retorna token e usuário quando credenciais são válidas", async () => {
-    findUniqueMock.mockResolvedValue({
+    findFirstMock.mockResolvedValue({
       id: 10,
       nome: "Operador",
+      usuario: "operador",
       email: "operador@ceslog.local",
       senhaHash: "hash",
       perfil: "OPERADOR",
@@ -52,7 +53,7 @@ describe("loginService", () => {
     signTokenMock.mockReturnValue("jwt.mock");
 
     const response = await loginService({
-      email: "operador@ceslog.local",
+      usuario: "operador",
       senha: "123456",
     });
 

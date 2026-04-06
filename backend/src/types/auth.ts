@@ -1,7 +1,7 @@
-﻿import type { PerfilUsuario } from "@prisma/client";
+﻿import type { PerfilUsuario, TurnoUsuario } from "@prisma/client";
 
 export type LoginInput = {
-  email: string;
+  usuario: string;
   senha: string;
 };
 
@@ -9,14 +9,16 @@ export type AuthTokenPayload = {
   sub: number;
   perfil: PerfilUsuario;
   nome: string;
-  email: string;
-  turno: string | null;
+  usuario: string | null;
+  email: string | null;
+  turno: TurnoUsuario | null;
 };
 
 export type AuthenticatedUser = {
   id: number;
   perfil: PerfilUsuario;
   nome: string;
-  email: string;
-  turno: string | null;
+  usuario: string | null;
+  email: string | null;
+  turno: TurnoUsuario | null;
 };

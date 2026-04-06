@@ -28,7 +28,6 @@ export default function DashboardPage() {
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [openReport, setOpenReport] = useState<Relatorio | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const auth = getAuthSession();
@@ -39,7 +38,12 @@ export default function DashboardPage() {
     }
 
     const authSession = auth;
-    setIsAdmin(authSession.usuario.perfil === "ADMIN");
+    const userIsAdmin = authSession.usuario.perfil === "ADMIN";
+
+    if (userIsAdmin) {
+      navigate("/admin", { replace: true });
+      return;
+    }
 
     async function loadOpenReport() {
       setIsLoadingStatus(true);
@@ -116,7 +120,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-text-900">Relatorio em aberto</h2>
@@ -152,15 +156,6 @@ export default function DashboardPage() {
           <Button variant="secondary" onClick={() => navigate("/registros")}>Ver registros</Button>
         </Card>
 
-        {isAdmin ? (
-          <Card className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-text-900">Area administrativa</h2>
-              <p className="mt-1 text-sm text-text-700">Acesse o painel com visao geral e atalhos de gestao.</p>
-            </div>
-            <Button variant="secondary" onClick={() => navigate("/admin")}>Abrir painel admin</Button>
-          </Card>
-        ) : null}
       </div>
     </div>
   );
