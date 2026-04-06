@@ -32,3 +32,14 @@ export interface Relatorio {
   finalizadoEm: string | null;
   itens: RelatorioItem[];
 }
+
+export interface RelatorioResumo {
+  id: number;
+  dataRelatorio: string;
+  status: "ABERTO" | "FECHADO";
+  criadoEm: string;
+  finalizadoEm: string | null;
+  _count?: {
+    itens: number;
+  };
+}

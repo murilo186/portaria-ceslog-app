@@ -1,8 +1,21 @@
 ﻿import { apiRequest } from "./api";
-import type { Relatorio, RelatorioItem, RelatorioItemEditableFields } from "../types/relatorio";
+import type {
+  Relatorio,
+  RelatorioItem,
+  RelatorioItemEditableFields,
+  RelatorioResumo,
+} from "../types/relatorio";
 
 export async function getRelatorioHoje(token: string): Promise<Relatorio> {
   return apiRequest<Relatorio>("/api/relatorios/hoje", { token });
+}
+
+export async function listRelatorios(token: string): Promise<RelatorioResumo[]> {
+  return apiRequest<RelatorioResumo[]>("/api/relatorios", { token });
+}
+
+export async function getRelatorioById(relatorioId: number, token: string): Promise<Relatorio> {
+  return apiRequest<Relatorio>(`/api/relatorios/${relatorioId}`, { token });
 }
 
 export async function createRelatorioItem(

@@ -40,7 +40,7 @@ export default function DashboardPage() {
         {errorMessage ? <p className="mt-2 text-sm text-red-600">{errorMessage}</p> : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-text-900">Novo relatorio</h2>
@@ -60,6 +60,16 @@ export default function DashboardPage() {
           </div>
           <Button variant="secondary" onClick={() => void handleOpenRelatorio()} disabled={isLoading}>
             Continuar relatorio do dia
+          </Button>
+        </Card>
+
+        <Card className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-text-900">Registros por data</h2>
+            <p className="mt-1 text-sm text-text-700">Lista os relatorios fechados e permite abrir o detalhe.</p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate("/registros")}>
+            Ver registros
           </Button>
         </Card>
       </div>
