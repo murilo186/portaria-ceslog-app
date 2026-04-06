@@ -1,6 +1,6 @@
 ﻿import { AppError } from "../middlewares/errorMiddleware";
 import { prisma } from "../lib/prisma";
-import { getBusinessDateKey, reportDateFromKey } from "../utils/date";
+import { getBusinessDateKey } from "../utils/date";
 import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
 import type { Prisma } from "@prisma/client";
@@ -26,15 +26,29 @@ function reportInclude() {
   };
 }
 
-async function ensureOpenReport() {
+async function closeStaleOpenReports() {
   const todayKey = getBusinessDateKey();
-  const todayDate = reportDateFromKey(todayKey);
+
+  const openReports = await prisma.relatorio.findMany({
+    where: { status: "ABERTO" },
+    select: {
+      id: true,
+      dataRelatorio: true,
+    },
+  });
+
+  const staleIds = openReports
+    .filter((report) => getBusinessDateKey(report.dataRelatorio) !== todayKey)
+    .map((report) => report.id);
+
+  if (staleIds.length === 0) {
+    return;
+  }
 
   await prisma.relatorio.updateMany({
     where: {
-      status: "ABERTO",
-      dataRelatorio: {
-        lt: todayDate,
+      id: {
+        in: staleIds,
       },
     },
     data: {
@@ -42,8 +56,10 @@ async function ensureOpenReport() {
       finalizadoEm: new Date(),
     },
   });
+}
 
-  const relatorioAberto = await prisma.relatorio.findFirst({
+async function findOpenReport() {
+  return prisma.relatorio.findFirst({
     where: {
       status: "ABERTO",
     },
@@ -52,11 +68,9 @@ async function ensureOpenReport() {
     },
     include: reportInclude(),
   });
+}
 
-  if (relatorioAberto) {
-    return relatorioAberto;
-  }
-
+async function createOpenReport() {
   return prisma.relatorio.create({
     data: {
       dataRelatorio: new Date(),
@@ -66,8 +80,31 @@ async function ensureOpenReport() {
   });
 }
 
+export async function getOpenReportService() {
+  await closeStaleOpenReports();
+  return findOpenReport();
+}
+
+export async function createNewReportService() {
+  await closeStaleOpenReports();
+
+  const report = await findOpenReport();
+
+  if (report) {
+    throw new AppError("Já existe um relatório em aberto.", 409, "OPEN_REPORT_EXISTS");
+  }
+
+  return createOpenReport();
+}
+
 export async function getTodayReportService() {
-  return ensureOpenReport();
+  const report = await getOpenReportService();
+
+  if (report) {
+    return report;
+  }
+
+  return createOpenReport();
 }
 
 export async function listReportsService() {
@@ -368,4 +405,3 @@ export async function closeRelatorioService(relatorioId: number) {
     },
   });
 }
-

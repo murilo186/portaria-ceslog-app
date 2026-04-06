@@ -1,7 +1,9 @@
 ﻿import {
   closeRelatorioController,
+  createNewReportController,
   createRelatorioItemController,
   deleteRelatorioItemController,
+  getOpenReportController,
   getReportByIdController,
   getTodayReportController,
   listClosedReportsController,
@@ -17,7 +19,9 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/hoje", getTodayReportController);
+router.get("/aberto", getOpenReportController);
 router.get("/", listReportsController);
+router.post("/novo", writeRateLimit, createNewReportController);
 router.get("/fechados", listClosedReportsController);
 router.get("/:relatorioId", getReportByIdController);
 
@@ -27,4 +31,3 @@ router.delete("/:relatorioId/itens/:itemId", writeRateLimit, deleteRelatorioItem
 router.post("/:relatorioId/fechar", writeRateLimit, closeRelatorioController);
 
 export default router;
-

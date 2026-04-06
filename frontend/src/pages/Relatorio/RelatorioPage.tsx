@@ -2,10 +2,11 @@
   createRelatorioItem,
   deleteRelatorioItem,
   fecharRelatorio,
-  getRelatorioHoje,
+  getRelatorioAberto,
   updateRelatorioItem,
 } from "../../services/relatorioService";
 import { getAuthSession } from "../../services/authStorage";
+import { ApiError } from "../../services/api";
 import { getUserErrorMessage } from "../../services/errorService";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -85,11 +86,19 @@ export default function RelatorioPage() {
 
     async function loadRelatorio() {
       try {
-        const relatorio = await getRelatorioHoje(authSession.token);
+        const relatorio = await getRelatorioAberto(authSession.token);
         setRelatorioId(relatorio.id);
         setRelatorioStatus(relatorio.status);
         setItens(relatorio.itens);
       } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          navigate("/dashboard", {
+            replace: true,
+            state: { message: "Não existe relatório em aberto para continuar." },
+          });
+          return;
+        }
+
         setFeedback({
           type: "error",
           message: getUserErrorMessage(error, "Erro ao carregar relatório"),
@@ -685,6 +694,8 @@ export default function RelatorioPage() {
     </>
   );
 }
+
+
 
 
 

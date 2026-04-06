@@ -1,8 +1,10 @@
 ﻿import { AppError } from "../middlewares/errorMiddleware";
 import {
   closeRelatorioService,
+  createNewReportService,
   createRelatorioItemService,
   deleteRelatorioItemService,
+  getOpenReportService,
   getReportByIdService,
   getTodayReportService,
   listClosedReportsService,
@@ -67,6 +69,34 @@ export async function getTodayReportController(req: Request, res: Response, next
     ensureUser(req);
     const report = await getTodayReportService();
     return res.status(200).json(report);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getOpenReportController(req: Request, res: Response, next: NextFunction) {
+  try {
+    ensureUser(req);
+    const report = await getOpenReportService();
+
+    if (!report) {
+      return res.status(404).json({
+        message: "Não existe relatório em aberto.",
+        code: "OPEN_REPORT_NOT_FOUND",
+      });
+    }
+
+    return res.status(200).json(report);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function createNewReportController(req: Request, res: Response, next: NextFunction) {
+  try {
+    ensureUser(req);
+    const report = await createNewReportService();
+    return res.status(201).json(report);
   } catch (error) {
     return next(error);
   }

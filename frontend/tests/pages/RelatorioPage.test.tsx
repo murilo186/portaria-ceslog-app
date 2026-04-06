@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.fn();
 const getAuthSessionMock = vi.fn();
-const getRelatorioHojeMock = vi.fn();
+const getRelatorioAbertoMock = vi.fn();
 const createRelatorioItemMock = vi.fn();
 const updateRelatorioItemMock = vi.fn();
 const deleteRelatorioItemMock = vi.fn();
@@ -14,7 +14,7 @@ vi.mock("../../src/services/authStorage", () => ({
 }));
 
 vi.mock("../../src/services/relatorioService", () => ({
-  getRelatorioHoje: (...args: unknown[]) => getRelatorioHojeMock(...args),
+  getRelatorioAberto: (...args: unknown[]) => getRelatorioAbertoMock(...args),
   createRelatorioItem: (...args: unknown[]) => createRelatorioItemMock(...args),
   updateRelatorioItem: (...args: unknown[]) => updateRelatorioItemMock(...args),
   deleteRelatorioItem: (...args: unknown[]) => deleteRelatorioItemMock(...args),
@@ -50,7 +50,7 @@ describe("RelatorioPage", () => {
   });
 
   it("cria registro no fluxo happy path", async () => {
-    getRelatorioHojeMock.mockResolvedValue({
+    getRelatorioAbertoMock.mockResolvedValue({
       id: 10,
       dataRelatorio: "2026-04-06T00:00:00.000Z",
       status: "ABERTO",
@@ -104,7 +104,7 @@ describe("RelatorioPage", () => {
   });
 
   it("mantém tela somente leitura quando relatório está fechado", async () => {
-    getRelatorioHojeMock.mockResolvedValue({
+    getRelatorioAbertoMock.mockResolvedValue({
       id: 11,
       dataRelatorio: "2026-04-06T00:00:00.000Z",
       status: "FECHADO",

@@ -12,6 +12,17 @@ export async function getRelatorioHoje(token: string): Promise<Relatorio> {
   return apiRequest<Relatorio>("/api/relatorios/hoje", { token });
 }
 
+export async function getRelatorioAberto(token: string): Promise<Relatorio> {
+  return apiRequest<Relatorio>("/api/relatorios/aberto", { token });
+}
+
+export async function createNovoRelatorio(token: string): Promise<Relatorio> {
+  return apiRequest<Relatorio>("/api/relatorios/novo", {
+    method: "POST",
+    token,
+  });
+}
+
 export async function listRelatorios(token: string): Promise<RelatorioResumo[]> {
   return apiRequest<RelatorioResumo[]>("/api/relatorios", { token });
 }

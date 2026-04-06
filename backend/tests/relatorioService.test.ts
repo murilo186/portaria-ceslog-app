@@ -53,10 +53,10 @@ const operador = {
 describe("relatorioService regras críticas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    relatorioFindManyMock.mockResolvedValue([]);
   });
 
   it("retorna relatório aberto atual quando existir", async () => {
-    updateManyMock.mockResolvedValue({ count: 0 });
     findFirstMock.mockResolvedValue({
       id: 5,
       dataRelatorio: new Date("2026-04-06T10:30:00.000Z"),
@@ -66,14 +66,13 @@ describe("relatorioService regras críticas", () => {
 
     const report = await getTodayReportService();
 
-    expect(updateManyMock).toHaveBeenCalledTimes(1);
+    expect(relatorioFindManyMock).toHaveBeenCalledTimes(1);
     expect(findFirstMock).toHaveBeenCalledTimes(1);
     expect(createMock).not.toHaveBeenCalled();
     expect(report.id).toBe(5);
   });
 
   it("cria novo relatório quando não existe nenhum aberto", async () => {
-    updateManyMock.mockResolvedValue({ count: 0 });
     findFirstMock.mockResolvedValue(null);
     createMock.mockResolvedValue({
       id: 5,
@@ -84,7 +83,7 @@ describe("relatorioService regras críticas", () => {
 
     const report = await getTodayReportService();
 
-    expect(updateManyMock).toHaveBeenCalledTimes(1);
+    expect(relatorioFindManyMock).toHaveBeenCalledTimes(1);
     expect(findFirstMock).toHaveBeenCalledTimes(1);
     expect(createMock).toHaveBeenCalledTimes(1);
     expect(report.id).toBe(5);

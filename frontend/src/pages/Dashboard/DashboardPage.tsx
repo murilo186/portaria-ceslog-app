@@ -1,12 +1,13 @@
 ﻿import { getAuthSession } from "../../services/authStorage";
+import { ApiError } from "../../services/api";
 import { getUserErrorMessage } from "../../services/errorService";
-import { getRelatorioHoje, listRelatorios } from "../../services/relatorioService";
+import { createNovoRelatorio, getRelatorioAberto } from "../../services/relatorioService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import StatusBadge from "../../components/StatusBadge";
-import type { RelatorioResumo } from "../../types/relatorio";
+import type { Relatorio } from "../../types/relatorio";
 
 function formatDate(dateIso: string): string {
   const iso = dateIso.slice(0, 10);
@@ -19,7 +20,7 @@ export default function DashboardPage() {
 
   const [isLoadingAction, setIsLoadingAction] = useState(false);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
-  const [openReport, setOpenReport] = useState<RelatorioResumo | null>(null);
+  const [openReport, setOpenReport] = useState<Relatorio | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,11 +38,14 @@ export default function DashboardPage() {
       setErrorMessage(null);
 
       try {
-        const relatorios = await listRelatorios(authSession.token);
-        const report = relatorios.find((item) => item.status === "ABERTO") ?? null;
+        const report = await getRelatorioAberto(authSession.token);
         setOpenReport(report);
       } catch (error) {
-        setErrorMessage(getUserErrorMessage(error, "Não foi possível carregar o status do relatório"));
+        if (error instanceof ApiError && error.status === 404) {
+          setOpenReport(null);
+        } else {
+          setErrorMessage(getUserErrorMessage(error, "Não foi possível carregar o status do relatório"));
+        }
       } finally {
         setIsLoadingStatus(false);
       }
@@ -69,7 +73,7 @@ export default function DashboardPage() {
     setErrorMessage(null);
 
     try {
-      await getRelatorioHoje(auth.token);
+      await createNovoRelatorio(auth.token);
       navigate("/relatorio");
     } catch (error) {
       setErrorMessage(getUserErrorMessage(error, "Não foi possível criar o relatório"));
@@ -78,30 +82,13 @@ export default function DashboardPage() {
     }
   };
 
-  const handleContinueReport = async () => {
-    const auth = getAuthSession();
-
-    if (!auth) {
-      navigate("/");
-      return;
-    }
-
+  const handleContinueReport = () => {
     if (!hasOpenReport) {
       setErrorMessage("Não existe relatório em aberto no momento.");
       return;
     }
 
-    setIsLoadingAction(true);
-    setErrorMessage(null);
-
-    try {
-      await getRelatorioHoje(auth.token);
-      navigate("/relatorio");
-    } catch (error) {
-      setErrorMessage(getUserErrorMessage(error, "Não foi possível abrir o relatório em aberto"));
-    } finally {
-      setIsLoadingAction(false);
-    }
+    navigate("/relatorio");
   };
 
   return (
@@ -139,7 +126,7 @@ export default function DashboardPage() {
 
           <Button
             variant="secondary"
-            onClick={() => void handleContinueReport()}
+            onClick={handleContinueReport}
             disabled={isLoadingAction || isLoadingStatus || !hasOpenReport}
           >
             Continuar relatório do dia
