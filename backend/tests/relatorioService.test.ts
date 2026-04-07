@@ -46,6 +46,7 @@ const operador = {
   id: 1,
   perfil: "OPERADOR",
   nome: "Operador",
+  usuario: "operador.manha",
   email: "operador@ceslog.local",
   turno: "MANHA",
 } as const;

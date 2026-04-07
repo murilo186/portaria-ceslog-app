@@ -3,8 +3,10 @@
   createNewReportController,
   createRelatorioItemController,
   deleteRelatorioItemController,
+  getRelatorioClockController,
   getOpenReportController,
   getReportByIdController,
+  setRelatorioClockSimulationController,
   getTodayReportController,
   listClosedReportsController,
   listReportsController,
@@ -19,6 +21,8 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/hoje", getTodayReportController);
+router.get("/relogio", getRelatorioClockController);
+router.post("/relogio/simulacao", writeRateLimit, setRelatorioClockSimulationController);
 router.get("/aberto", getOpenReportController);
 router.get("/", listReportsController);
 router.post("/novo", writeRateLimit, createNewReportController);

@@ -1,13 +1,14 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const findUniqueMock = vi.fn();
+const findFirstMock = vi.fn();
 const compareMock = vi.fn();
 const signTokenMock = vi.fn();
+const createOrReplaceUserSessionMock = vi.fn();
 
 vi.mock("../src/lib/prisma", () => ({
   prisma: {
     usuario: {
-      findUnique: (...args: unknown[]) => findUniqueMock(...args),
+      findFirst: (...args: unknown[]) => findFirstMock(...args),
     },
   },
 }));
@@ -22,6 +23,10 @@ vi.mock("../src/lib/jwt", () => ({
   signToken: (...args: unknown[]) => signTokenMock(...args),
 }));
 
+vi.mock("../src/services/sessionService", () => ({
+  createOrReplaceUserSession: (...args: unknown[]) => createOrReplaceUserSessionMock(...args),
+}));
+
 import { loginService } from "../src/services/authService";
 
 describe("loginService", () => {
@@ -30,18 +35,19 @@ describe("loginService", () => {
   });
 
   it("retorna erro 401 para credenciais inválidas", async () => {
-    findUniqueMock.mockResolvedValue(null);
+    findFirstMock.mockResolvedValue(null);
 
-    await expect(loginService({ email: "x@x.com", senha: "123" })).rejects.toMatchObject({
+    await expect(loginService({ usuario: "x", senha: "123" })).rejects.toMatchObject({
       statusCode: 401,
       code: "INVALID_CREDENTIALS",
     });
   });
 
   it("retorna token e usuário quando credenciais são válidas", async () => {
-    findUniqueMock.mockResolvedValue({
+    findFirstMock.mockResolvedValue({
       id: 10,
       nome: "Operador",
+      usuario: "operador",
       email: "operador@ceslog.local",
       senhaHash: "hash",
       perfil: "OPERADOR",
@@ -49,14 +55,21 @@ describe("loginService", () => {
       ativo: true,
     });
     compareMock.mockResolvedValue(true);
+    createOrReplaceUserSessionMock.mockResolvedValue("session.mock");
     signTokenMock.mockReturnValue("jwt.mock");
 
     const response = await loginService({
-      email: "operador@ceslog.local",
+      usuario: "operador",
       senha: "123456",
     });
 
+    expect(createOrReplaceUserSessionMock).toHaveBeenCalledWith(10);
     expect(signTokenMock).toHaveBeenCalledTimes(1);
+    expect(signTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "session.mock",
+      }),
+    );
     expect(response.token).toBe("jwt.mock");
     expect(response.usuario).toMatchObject({
       id: 10,

@@ -1,7 +1,7 @@
 ﻿import type { Usuario } from "./usuario";
 
 export interface LoginRequest {
-  email: string;
+  usuario: string;
   senha: string;
 }
 

@@ -6,6 +6,7 @@ type ApiErrorCode =
   | "AUTH_REQUIRED"
   | "TOKEN_EXPIRED"
   | "TOKEN_INVALID"
+  | "TOKEN_REVOKED"
   | "FORBIDDEN_ITEM_OWNER"
   | "REPORT_CLOSED"
   | "VALIDATION_ERROR"
@@ -25,7 +26,7 @@ export class ApiError extends Error {
 }
 
 type RequestConfig = {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   token?: string | null;
 };
