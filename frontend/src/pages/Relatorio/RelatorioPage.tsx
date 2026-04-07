@@ -1,8 +1,8 @@
 ﻿import {
   createRelatorioItem,
-  deleteRelatorioItem,
-  fecharRelatorio,
-  getRelatorioAberto,
+  deleteRelatorioItem,  getRelatorioAberto,
+  getRelatorioClock,
+  setRelatorioClockSimulation,
   updateRelatorioItem,
 } from "../../services/relatorioService";
 import { getAuthSession } from "../../services/authStorage";
@@ -72,6 +72,10 @@ export default function RelatorioPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [countdownMinutes, setCountdownMinutes] = useState<number | null>(null);
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
+  const [clockSimulationStart, setClockSimulationStart] = useState<string | null>(null);
+  const showSimulationControls = import.meta.env.DEV;
 
   useEffect(() => {
     const auth = getAuthSession();
@@ -113,6 +117,48 @@ export default function RelatorioPage() {
 
     void loadRelatorio();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncClock = async () => {
+      try {
+        const snapshot = await getRelatorioClock(token);
+
+        if (cancelled) {
+          return;
+        }
+
+        setClockSimulationStart(snapshot.simulationEnabled ? snapshot.simulationStart : null);
+
+        if (snapshot.showCountdown) {
+          const totalSeconds = Math.max(0, Math.ceil(snapshot.msToMidnight / 1000));
+          setCountdownMinutes(Math.floor(totalSeconds / 60));
+          setCountdownSeconds(totalSeconds % 60);
+        } else {
+          setCountdownMinutes(null);
+          setCountdownSeconds(null);
+        }
+      } catch {
+        setCountdownMinutes(null);
+        setCountdownSeconds(null);
+      }
+    };
+
+    void syncClock();
+    const intervalId = window.setInterval(() => {
+      void syncClock();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [relatorioId, relatorioStatus, token]);
 
   const isReadOnly = relatorioStatus === "FECHADO";
 
@@ -272,17 +318,8 @@ export default function RelatorioPage() {
       setIsSubmitting(false);
     }
   };
-
-  const handleCloseRelatorio = async () => {
+  const handleSimulateClockStart = async (start: string) => {
     if (!token || !relatorioId || isReadOnly) {
-      return;
-    }
-
-    const shouldClose = window.confirm(
-      "Tem certeza que deseja fechar o relatório? Depois disso ele ficará somente leitura.",
-    );
-
-    if (!shouldClose) {
       return;
     }
 
@@ -290,13 +327,23 @@ export default function RelatorioPage() {
     setFeedback(null);
 
     try {
-      const closed = await fecharRelatorio(relatorioId, token);
-      setRelatorioStatus(closed.status);
-      setFeedback({ type: "success", message: "Relatório fechado com sucesso." });
+      const snapshot = await setRelatorioClockSimulation(start, token);
+      setClockSimulationStart(snapshot.simulationStart);
+
+      if (snapshot.showCountdown) {
+        const totalSeconds = Math.max(0, Math.ceil(snapshot.msToMidnight / 1000));
+        setCountdownMinutes(Math.floor(totalSeconds / 60));
+        setCountdownSeconds(totalSeconds % 60);
+      } else {
+        setCountdownMinutes(null);
+        setCountdownSeconds(null);
+      }
+
+      setFeedback({ type: "success", message: `Horário simulado ajustado para ${start}.` });
     } catch (error) {
       setFeedback({
         type: "error",
-        message: getUserErrorMessage(error, "Erro ao fechar relatório"),
+        message: getUserErrorMessage(error, "Não foi possível ajustar o horário de simulação."),
       });
     } finally {
       setIsSubmitting(false);
@@ -308,17 +355,17 @@ export default function RelatorioPage() {
       <div className="space-y-5 sm:space-y-6">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(-1)}>
-              Voltar
-            </Button>
-            <Button
-              type="button"
-              className="px-3 py-2 text-xs"
-              onClick={() => void handleCloseRelatorio()}
-              disabled={isSubmitting || isLoading || isReadOnly}
-            >
-              {isReadOnly ? "Relatório fechado" : "Fechar relatório"}
-            </Button>
+            {showSimulationControls ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="px-3 py-2 text-xs"
+                onClick={() => void handleSimulateClockStart("23:58")}
+                disabled={isSubmitting || isLoading || isReadOnly}
+              >
+                Simular 23:58
+              </Button>
+            ) : null}
             <StatusBadge status={relatorioStatus} />
           </div>
 
@@ -326,6 +373,14 @@ export default function RelatorioPage() {
           <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
           <p className="text-xs text-text-700">Turno aplicado automaticamente: {turnoAtual}</p>
           {usuarioLogado ? <p className="text-xs text-text-700">Autor automático: {usuarioLogado.nome}</p> : null}
+          {countdownMinutes !== null && countdownSeconds !== null ? (
+            <p className="text-sm font-semibold text-amber-700">
+              Fechamento automático em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
+            </p>
+          ) : null}
+          {clockSimulationStart ? (
+            <p className="text-xs text-amber-700">Simulação de horário ativa no backend: início em {clockSimulationStart}.</p>
+          ) : null}
           {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatório fechado: somente leitura.</p> : null}
 
           {feedback ? (
@@ -481,9 +536,29 @@ export default function RelatorioPage() {
 
               return (
                 <Card key={item.id} className="space-y-2">
-                  <p className="text-sm font-semibold text-text-900">{item.nome}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-text-900">{item.empresa}</p>
+                    {canManage ? (
+                      <div className="flex items-center gap-1">
+                        <IconActionButton
+                          action="edit"
+                          label="Editar registro"
+                          className="h-8 w-8 border-0 bg-transparent hover:bg-surface-50"
+                          onClick={() => handleOpenEditModal(item)}
+                          disabled={isSubmitting}
+                        />
+                        <IconActionButton
+                          action="delete"
+                          label="Excluir registro"
+                          className="h-8 w-8 border-0 bg-transparent hover:bg-red-50"
+                          onClick={() => void handleDelete(item)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                    <p className="text-sm text-text-700">Empresa: {item.empresa}</p>
+                    <p className="text-sm text-text-700">Nome: {item.nome}</p>
                     <p className="text-sm text-text-700">Placa: {item.placaVeiculo}</p>
                     <p className="text-sm text-text-700">Perfil: {perfilPessoaLabel(item.perfilPessoa)}</p>
                     <p className="text-sm text-text-700">Entrada: {item.horaEntrada ?? "-"}</p>
@@ -493,24 +568,9 @@ export default function RelatorioPage() {
                     <p className="col-span-2 text-sm text-text-700">Obs.: {item.observacoes ?? "-"}</p>
                   </div>
 
-                  {canManage ? (
-                    <div className="flex gap-2 pt-1">
-                      <IconActionButton
-                        action="edit"
-                        label="Editar registro"
-                        onClick={() => handleOpenEditModal(item)}
-                        disabled={isSubmitting}
-                      />
-                      <IconActionButton
-                        action="delete"
-                        label="Excluir registro"
-                        onClick={() => void handleDelete(item)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  ) : (
+                  {!canManage ? (
                     <p className="pt-1 text-xs text-text-700">Somente autor/admin pode editar este item.</p>
-                  )}
+                  ) : null}
                 </Card>
               );
             })
@@ -741,6 +801,11 @@ export default function RelatorioPage() {
     </>
   );
 }
+
+
+
+
+
 
 
 

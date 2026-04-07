@@ -1,8 +1,8 @@
 ﻿import { getAuthSession } from "../../services/authStorage";
 import { getUserErrorMessage } from "../../services/errorService";
 import { getRelatorioById } from "../../services/relatorioService";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import IconActionButton from "../../components/IconActionButton";
@@ -34,14 +34,76 @@ function escapeCsvValue(value: string): string {
   return `"${escaped}"`;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function countOccurrences(text: string, term: string): number {
+  if (!term) {
+    return 0;
+  }
+
+  const matches = text.match(new RegExp(escapeRegExp(term), "gi"));
+  return matches ? matches.length : 0;
+}
+
+function renderHighlightedText(text: string, term: string): ReactNode {
+  if (!term) {
+    return text;
+  }
+
+  const regex = new RegExp(`(${escapeRegExp(term)})`, "gi");
+  const normalizedTerm = term.toLowerCase();
+  const parts = text.split(regex);
+
+  return parts.map((part, index) =>
+    part.toLowerCase() === normalizedTerm ? (
+      <mark key={`${part}-${index}`} className="rounded bg-amber-200 px-0.5 text-text-900">
+        {part}
+      </mark>
+    ) : (
+      <span key={`${part}-${index}`}>{part}</span>
+    ),
+  );
+}
+
+function countItemOccurrences(item: Relatorio["itens"][number], fallbackUser: Usuario | null, term: string): number {
+  const fields = [
+    item.empresa,
+    item.placaVeiculo,
+    item.nome,
+    perfilPessoaLabel(item.perfilPessoa),
+    item.horaEntrada ?? "",
+    item.horaSaida ?? "",
+    item.observacoes ?? "",
+    getAutor(item, fallbackUser),
+  ];
+
+  return fields.reduce((total, field) => total + countOccurrences(field, term), 0);
+}
+
 export default function RegistroDetalhePage() {
   const navigate = useNavigate();
   const { relatorioId } = useParams<{ relatorioId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
   const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [dateFilter, setDateFilter] = useState(searchParams.get("data") ?? "");
+  const [searchFilter, setSearchFilter] = useState(searchParams.get("busca") ?? "");
+  const [appliedSearchFilter, setAppliedSearchFilter] = useState((searchParams.get("busca") ?? "").trim());
+
+  useEffect(() => {
+    const nextDateFilter = searchParams.get("data") ?? "";
+    const nextSearchFilter = searchParams.get("busca") ?? "";
+
+    setDateFilter(nextDateFilter);
+    setSearchFilter(nextSearchFilter);
+    setAppliedSearchFilter(nextSearchFilter.trim());
+  }, [searchParams]);
 
   useEffect(() => {
     const auth = getAuthSession();
@@ -56,6 +118,9 @@ export default function RegistroDetalhePage() {
     setUsuarioLogado(authSession.usuario);
 
     async function loadDetail() {
+      setIsLoading(true);
+      setErrorMessage(null);
+
       try {
         const parsedId = Number(relatorioId);
 
@@ -77,6 +142,51 @@ export default function RegistroDetalhePage() {
   }, [navigate, relatorioId]);
 
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
+
+  const searchStats = useMemo(() => {
+    if (!relatorio || !appliedSearchFilter) {
+      return {
+        totalOccurrences: 0,
+        matchedItems: 0,
+      };
+    }
+
+    return relatorio.itens.reduce(
+      (accumulator, item) => {
+        const itemOccurrences = countItemOccurrences(item, usuarioLogado, appliedSearchFilter);
+
+        return {
+          totalOccurrences: accumulator.totalOccurrences + itemOccurrences,
+          matchedItems: accumulator.matchedItems + (itemOccurrences > 0 ? 1 : 0),
+        };
+      },
+      {
+        totalOccurrences: 0,
+        matchedItems: 0,
+      },
+    );
+  }, [appliedSearchFilter, relatorio, usuarioLogado]);
+
+  const handleApplyFilters = () => {
+    const normalizedSearch = searchFilter.trim();
+    const params = new URLSearchParams();
+
+    if (dateFilter) {
+      params.set("data", dateFilter);
+    }
+
+    if (normalizedSearch) {
+      params.set("busca", normalizedSearch);
+    }
+
+    params.set("page", "1");
+
+    setSearchParams(params, { replace: true });
+  };
+
+  const handleClearFilters = () => {
+    setSearchParams({}, { replace: true });
+  };
 
   const handleDownloadCsv = () => {
     if (!relatorio) {
@@ -131,9 +241,6 @@ export default function RegistroDetalhePage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(-1)}>
-            Voltar
-          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -153,8 +260,53 @@ export default function RegistroDetalhePage() {
         {!isAdmin ? (
           <p className="text-xs text-text-700">Somente administradores podem editar registros fechados.</p>
         ) : null}
+        {appliedSearchFilter ? (
+          <p className="text-xs text-text-700">
+            {searchStats.totalOccurrences} ocorrência(s) em {searchStats.matchedItems} item(ns) para "{appliedSearchFilter}".
+          </p>
+        ) : null}
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
       </div>
+
+      <Card className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="filtro-data-detalhe" className="text-sm font-medium text-text-700">
+              Data
+            </label>
+            <input
+              id="filtro-data-detalhe"
+              type="date"
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5 md:col-span-2">
+            <label htmlFor="filtro-busca-detalhe" className="text-sm font-medium text-text-700">
+              Busca por placa ou nome
+            </label>
+            <input
+              id="filtro-busca-detalhe"
+              type="search"
+              value={searchFilter}
+              onChange={(event) => setSearchFilter(event.target.value)}
+              placeholder="Ex.: ABC-1D23 ou João"
+              className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" onClick={handleApplyFilters}>
+            Aplicar filtros
+          </Button>
+          <Button type="button" variant="secondary" onClick={handleClearFilters}>
+            Limpar
+          </Button>
+        </div>
+      </Card>
 
       <Card className="p-0">
         <div className="overflow-x-auto">
@@ -189,13 +341,21 @@ export default function RegistroDetalhePage() {
               ) : (
                 relatorio.itens.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-3 text-sm text-text-900">{item.empresa}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{item.placaVeiculo}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{item.nome}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{perfilPessoaLabel(item.perfilPessoa)}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{item.horaEntrada ?? "-"}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{item.horaSaida ?? "-"}</td>
-                    <td className="px-4 py-3 text-sm text-text-900">{getAutor(item, usuarioLogado)}</td>
+                    <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.empresa, appliedSearchFilter)}</td>
+                    <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.placaVeiculo, appliedSearchFilter)}</td>
+                    <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.nome, appliedSearchFilter)}</td>
+                    <td className="px-4 py-3 text-sm text-text-900">
+                      {renderHighlightedText(perfilPessoaLabel(item.perfilPessoa), appliedSearchFilter)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-text-900">
+                      {renderHighlightedText(item.horaEntrada ?? "-", appliedSearchFilter)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-text-900">
+                      {renderHighlightedText(item.horaSaida ?? "-", appliedSearchFilter)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-text-900">
+                      {renderHighlightedText(getAutor(item, usuarioLogado), appliedSearchFilter)}
+                    </td>
                     {isAdmin ? (
                       <td className="px-4 py-3 text-sm text-text-900">
                         <IconActionButton action="edit" label="Editar registro" disabled />
@@ -211,9 +371,3 @@ export default function RegistroDetalhePage() {
     </div>
   );
 }
-
-
-
-
-
-
