@@ -3,6 +3,7 @@
 const findFirstMock = vi.fn();
 const compareMock = vi.fn();
 const signTokenMock = vi.fn();
+const createOrReplaceUserSessionMock = vi.fn();
 
 vi.mock("../src/lib/prisma", () => ({
   prisma: {
@@ -20,6 +21,10 @@ vi.mock("bcryptjs", () => ({
 
 vi.mock("../src/lib/jwt", () => ({
   signToken: (...args: unknown[]) => signTokenMock(...args),
+}));
+
+vi.mock("../src/services/sessionService", () => ({
+  createOrReplaceUserSession: (...args: unknown[]) => createOrReplaceUserSessionMock(...args),
 }));
 
 import { loginService } from "../src/services/authService";
@@ -50,6 +55,7 @@ describe("loginService", () => {
       ativo: true,
     });
     compareMock.mockResolvedValue(true);
+    createOrReplaceUserSessionMock.mockResolvedValue("session.mock");
     signTokenMock.mockReturnValue("jwt.mock");
 
     const response = await loginService({
@@ -57,7 +63,13 @@ describe("loginService", () => {
       senha: "123456",
     });
 
+    expect(createOrReplaceUserSessionMock).toHaveBeenCalledWith(10);
     expect(signTokenMock).toHaveBeenCalledTimes(1);
+    expect(signTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "session.mock",
+      }),
+    );
     expect(response.token).toBe("jwt.mock");
     expect(response.usuario).toMatchObject({
       id: 10,

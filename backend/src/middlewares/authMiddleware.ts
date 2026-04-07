@@ -1,9 +1,10 @@
 ﻿import { verifyToken } from "../lib/jwt";
+import { getActiveSessionId } from "../services/sessionService";
 import { AppError } from "./errorMiddleware";
 import type { NextFunction, Request, Response } from "express";
 import { TokenExpiredError } from "jsonwebtoken";
 
-export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
+export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -14,6 +15,11 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
 
   try {
     const payload = verifyToken(token);
+    const activeSessionId = await getActiveSessionId(payload.sub);
+
+    if (!activeSessionId || payload.sessionId !== activeSessionId) {
+      return next(new AppError("Sessão encerrada por novo login em outro dispositivo.", 401, "TOKEN_REVOKED"));
+    }
 
     req.user = {
       id: payload.sub,
@@ -33,4 +39,3 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
     return next(new AppError("Token inválido", 401, "TOKEN_INVALID"));
   }
 }
-

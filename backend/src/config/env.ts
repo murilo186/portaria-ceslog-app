@@ -6,6 +6,7 @@ type Env = {
   PORT: number;
   DATABASE_URL: string;
   JWT_SECRET: string;
+  CLOCK_SIMULATION_START: string | null;
 };
 
 function required(name: string): string {
@@ -22,4 +23,5 @@ export const env: Env = {
   PORT: Number(process.env.PORT ?? 3000),
   DATABASE_URL: required("DATABASE_URL"),
   JWT_SECRET: required("JWT_SECRET"),
+  CLOCK_SIMULATION_START: process.env.CLOCK_SIMULATION_START ?? null,
 };

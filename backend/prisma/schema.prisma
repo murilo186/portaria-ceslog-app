@@ -43,6 +43,7 @@ model Usuario {
   criadoEm        DateTime         @default(now())
 
   relatorioItens  RelatorioItem[]
+  auditLogs       AuditLog[]
 
   @@map("usuarios")
 }
@@ -79,5 +80,27 @@ model RelatorioItem {
   @@index([relatorioId])
   @@index([usuarioId])
   @@map("relatorio_itens")
+}
+
+model AuditLog {
+  id              Int       @id @default(autoincrement())
+  usuarioId       Int?      @map("usuario_id")
+  usuarioNome     String?   @map("usuario_nome")
+  usuarioLogin    String?   @map("usuario_login")
+  acao            String
+  entidade        String
+  entidadeId      Int?      @map("entidade_id")
+  descricao       String
+  detalhes        Json?
+  ip              String?
+  userAgent       String?   @map("user_agent")
+  requestId       String?   @map("request_id")
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+
+  usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([usuarioId])
+  @@index([criadoEm])
+  @@map("audit_logs")
 }
 

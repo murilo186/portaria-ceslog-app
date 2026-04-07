@@ -73,4 +73,14 @@ export interface ClosedReportsFilters {
   busca?: string;
 }
 
+export interface RelatorioClockSnapshot {
+  nowIso: string;
+  businessDateKey: string;
+  msToMidnight: number;
+  minutesToMidnight: number;
+  showCountdown: boolean;
+  simulationEnabled: boolean;
+  simulationStart: string | null;
+}
+
 

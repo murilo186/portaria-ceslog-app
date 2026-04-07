@@ -1,15 +1,14 @@
 ﻿import { getAuthSession } from "../../services/authStorage";
 import { getUserErrorMessage } from "../../services/errorService";
 import { listRelatoriosFechados } from "../../services/relatorioService";
-import { createUsuario, deleteUsuario, listUsuarios } from "../../services/usuarioService";
+import { createUsuario, deleteUsuario, listAuditLogs, listUsuarios } from "../../services/usuarioService";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import IconActionButton from "../../components/IconActionButton";
 import Input from "../../components/Input";
 import type { RelatorioResumo } from "../../types/relatorio";
-import type { TurnoUsuario, UsuarioAdminListItem } from "../../types/usuario";
+import type { AuditLogItem, TurnoUsuario, UsuarioAdminListItem } from "../../types/usuario";
 
 type Feedback = {
   type: "error" | "success";
@@ -36,19 +35,74 @@ function formatDate(dateIso: string): string {
   return `${day}/${month}/${year}`;
 }
 
+function formatDateTime(dateIso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "medium",
+  }).format(new Date(dateIso));
+}
+
+function formatActionLabel(action: string): string {
+  return action.replaceAll("_", " ");
+}
+
+function formatAuditDetails(details: Record<string, unknown> | null): string | null {
+  if (!details) {
+    return null;
+  }
+
+  const entries = Object.entries(details);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return entries.map(([key, value]) => `${key}: ${String(value ?? "-")}`).join(" | ");
+}
+
+function formatUserAgent(userAgent: string | null): string {
+  if (!userAgent) {
+    return "-";
+  }
+
+  if (userAgent.length <= 80) {
+    return userAgent;
+  }
+
+  return `${userAgent.slice(0, 77)}...`;
+}
+
 export default function AdminPage() {
   const navigate = useNavigate();
 
   const [isLoadingRegistros, setIsLoadingRegistros] = useState(true);
   const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(true);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
   const [isSubmittingUsuario, setIsSubmittingUsuario] = useState(false);
 
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [latestClosedReports, setLatestClosedReports] = useState<RelatorioResumo[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioAdminListItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [novoUsuarioForm, setNovoUsuarioForm] = useState<NovoUsuarioForm>(initialNovoUsuarioForm);
 
   const auth = useMemo(() => getAuthSession(), []);
+
+  const loadLogs = async (token: string) => {
+    setIsLoadingLogs(true);
+
+    try {
+      const data = await listAuditLogs(token, 20);
+      setAuditLogs(data);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Nao foi possivel carregar os logs de auditoria."),
+      });
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
 
   useEffect(() => {
     if (!auth) {
@@ -72,7 +126,7 @@ export default function AdminPage() {
       try {
         const closedResponse = await listRelatoriosFechados(authSession.token, {
           page: 1,
-          pageSize: 6,
+          pageSize: 5,
         });
 
         setLatestClosedReports(closedResponse.data);
@@ -104,6 +158,7 @@ export default function AdminPage() {
 
     void loadRegistros();
     void loadUsuarios();
+    void loadLogs(authSession.token);
   }, [auth, navigate]);
 
   const handleCreateUsuario = async (event: FormEvent<HTMLFormElement>) => {
@@ -131,6 +186,7 @@ export default function AdminPage() {
       setUsuarios((prev) => [created, ...prev]);
       setNovoUsuarioForm(initialNovoUsuarioForm);
       setFeedback({ type: "success", message: "Usuario criado com sucesso." });
+      await loadLogs(authSession.token);
     } catch (error) {
       setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel criar usuario.") });
     } finally {
@@ -145,7 +201,7 @@ export default function AdminPage() {
     }
 
     const authSession = auth;
-    const shouldDelete = window.confirm("Confirma a exclusao deste usuario?");
+    const shouldDelete = window.confirm("Confirma inativar este operador? Ele nao conseguira mais logar.");
 
     if (!shouldDelete) {
       return;
@@ -158,21 +214,28 @@ export default function AdminPage() {
       await deleteUsuario(usuarioId, authSession.token);
       setUsuarios((prev) => prev.map((item) => (item.id === usuarioId ? { ...item, ativo: false } : item)));
       setFeedback({ type: "success", message: "Usuario desativado com sucesso." });
+      await loadLogs(authSession.token);
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel excluir usuario.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel inativar usuario.") });
     } finally {
       setIsSubmittingUsuario(false);
     }
   };
 
+  const handleRefreshLogs = async () => {
+    if (!auth) {
+      navigate("/");
+      return;
+    }
+
+    await loadLogs(auth.token);
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(-1)}>
-          Voltar
-        </Button>
         <h1 className="text-2xl font-semibold text-text-900">Administracao</h1>
-        <p className="text-sm text-text-700">Gerenciamento de usuarios, historico de logs (futuro) e registros.</p>
+        <p className="text-sm text-text-700">Gerenciamento de usuarios, logs de auditoria e registros.</p>
         {feedback ? (
           <p className={`text-sm ${feedback.type === "error" ? "text-red-600" : "text-emerald-700"}`}>
             {feedback.message}
@@ -180,22 +243,11 @@ export default function AdminPage() {
         ) : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="space-y-2">
-          <h2 className="text-base font-semibold text-text-900">Gerenciar usuarios</h2>
-          <p className="text-sm text-text-700">Cadastro e controle de acessos dos operadores.</p>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-1">
         <Card className="space-y-2">
           <h2 className="text-base font-semibold text-text-900">Lista de registros</h2>
           <p className="text-sm text-text-700">Acesse o historico completo de relatorios fechados.</p>
           <Button type="button" variant="secondary" onClick={() => navigate("/registros")}>Abrir registros</Button>
-        </Card>
-
-        <Card className="space-y-2">
-          <h2 className="text-base font-semibold text-text-900">Historico de logs</h2>
-          <p className="text-sm text-text-700">Funcionalidade planejada para auditoria administrativa.</p>
-          <Button type="button" variant="secondary" disabled>Em breve</Button>
         </Card>
       </div>
 
@@ -269,7 +321,8 @@ export default function AdminPage() {
             <div className="space-y-2">
               {usuarios.map((item) => {
                 const isCurrentUser = auth?.usuario.id === item.id;
-                const canDelete = item.ativo && item.perfil !== "ADMIN" && !isCurrentUser;
+                const isOperador = item.perfil === "OPERADOR";
+                const canDelete = item.ativo && isOperador && !isCurrentUser;
 
                 return (
                   <div
@@ -284,12 +337,17 @@ export default function AdminPage() {
                       <p className="text-xs text-text-700">Status: {item.ativo ? "ATIVO" : "INATIVO"}</p>
                     </div>
 
-                    <IconActionButton
-                      action="delete"
-                      label={item.ativo ? "Excluir usuario" : "Usuario inativo"}
-                      onClick={() => void handleDeleteUsuario(item.id)}
-                      disabled={!canDelete || isSubmittingUsuario}
-                    />
+                    {item.perfil === "ADMIN" ? null : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full sm:w-auto"
+                        onClick={() => void handleDeleteUsuario(item.id)}
+                        disabled={!canDelete || isSubmittingUsuario}
+                      >
+                        {item.ativo ? "Inativar" : "Inativo"}
+                      </Button>
+                    )}
                   </div>
                 );
               })}
@@ -297,6 +355,50 @@ export default function AdminPage() {
           )}
         </Card>
       </div>
+
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-text-900">Logs de auditoria</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-700">Mostrando ultimos {auditLogs.length} eventos</span>
+            <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => void handleRefreshLogs()} disabled={isLoadingLogs}>
+              Atualizar logs
+            </Button>
+          </div>
+        </div>
+
+        {isLoadingLogs ? (
+          <p className="text-sm text-text-700">Carregando lista...</p>
+        ) : auditLogs.length === 0 ? (
+          <p className="text-sm text-text-700">Ainda nao ha eventos registrados.</p>
+        ) : (
+          <div className="divide-y divide-surface-200 rounded-md border border-surface-200">
+            {auditLogs.map((log) => (
+              <div key={log.id} className="space-y-1 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-text-900">{formatActionLabel(log.acao)}</p>
+                  <p className="text-xs text-text-700">{formatDateTime(log.criadoEm)}</p>
+                </div>
+                <p className="text-sm text-text-700">{log.descricao}</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-700">
+                  <span>Autor: {log.usuario?.nome ?? log.usuarioNome ?? "-"}</span>
+                  <span>Login: {log.usuario?.usuario ?? log.usuarioLogin ?? "-"}</span>
+                  <span>
+                    Alvo: {log.entidade}
+                    {log.entidadeId ? ` #${log.entidadeId}` : ""}
+                  </span>
+                  <span>IP: {log.ip ?? "-"}</span>
+                  <span>Request ID: {log.requestId ?? "-"}</span>
+                  <span>User-Agent: {formatUserAgent(log.userAgent)}</span>
+                </div>
+                {formatAuditDetails(log.detalhes) ? (
+                  <p className="text-xs text-text-700">Detalhes: {formatAuditDetails(log.detalhes)}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card className="space-y-3">
         <h2 className="text-base font-semibold text-text-900">Ultimos registros fechados</h2>

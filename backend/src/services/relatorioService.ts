@@ -1,6 +1,7 @@
 ﻿import { AppError } from "../middlewares/errorMiddleware";
 import { prisma } from "../lib/prisma";
 import { getBusinessDateKey } from "../utils/date";
+import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
 import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
 import type { Prisma } from "@prisma/client";
@@ -28,7 +29,7 @@ function reportInclude() {
 }
 
 async function closeStaleOpenReports() {
-  const todayKey = getBusinessDateKey();
+  const todayKey = getCurrentBusinessDateKey();
 
   const openReports = await prisma.relatorio.findMany({
     where: { status: "ABERTO" },
@@ -54,7 +55,7 @@ async function closeStaleOpenReports() {
     },
     data: {
       status: "FECHADO",
-      finalizadoEm: new Date(),
+      finalizadoEm: getCurrentDate(),
     },
   });
 }
@@ -74,7 +75,7 @@ async function findOpenReport() {
 async function createOpenReport() {
   return prisma.relatorio.create({
     data: {
-      dataRelatorio: new Date(),
+      dataRelatorio: getCurrentDate(),
       status: "ABERTO",
     },
     include: reportInclude(),
@@ -408,8 +409,16 @@ export async function closeRelatorioService(relatorioId: number) {
     where: { id: relatorio.id },
     data: {
       status: "FECHADO",
-      finalizadoEm: new Date(),
+      finalizadoEm: getCurrentDate(),
     },
   });
+}
+
+export function getRelatorioClockService() {
+  return getReportClockSnapshot();
+}
+
+export function setRelatorioClockSimulationService(start: string | null) {
+  return setClockSimulationStart(start);
 }
 

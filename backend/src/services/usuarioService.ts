@@ -118,3 +118,40 @@ export async function deleteUsuarioService(usuarioId: number, currentAdminId: nu
 
   return { ok: true };
 }
+
+export async function updateUsuarioSenhaService(
+  usuarioId: number,
+  currentAdminId: number,
+  novaSenha: string,
+) {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: {
+      id: true,
+      perfil: true,
+    },
+  });
+
+  if (!usuario) {
+    throw new AppError("Usuario nao encontrado.", 404, "USER_NOT_FOUND");
+  }
+
+  if (usuario.id === currentAdminId) {
+    throw new AppError("Use a alteracao de senha da propria conta.", 409, "SELF_PASSWORD_CHANGE_BLOCKED");
+  }
+
+  if (usuario.perfil === "ADMIN") {
+    throw new AppError("Troca de senha permitida apenas para operadores.", 409, "ADMIN_PASSWORD_CHANGE_BLOCKED");
+  }
+
+  const senhaHash = await bcrypt.hash(novaSenha, 10);
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: {
+      senhaHash,
+    },
+  });
+
+  return { ok: true };
+}

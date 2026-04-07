@@ -2,6 +2,7 @@
 import { signToken } from "../lib/jwt";
 import type { LoginInput } from "../types/auth";
 import { AppError } from "../middlewares/errorMiddleware";
+import { createOrReplaceUserSession } from "./sessionService";
 import bcrypt from "bcryptjs";
 
 function normalizeUsuario(value: string): string {
@@ -25,6 +26,8 @@ export async function loginService(input: LoginInput) {
     throw new AppError("Credenciais inválidas", 401, "INVALID_CREDENTIALS");
   }
 
+  const sessionId = await createOrReplaceUserSession(usuario.id);
+
   const token = signToken({
     sub: usuario.id,
     perfil: usuario.perfil,
@@ -32,6 +35,7 @@ export async function loginService(input: LoginInput) {
     usuario: usuario.usuario,
     email: usuario.email,
     turno: usuario.turno,
+    sessionId,
   });
 
   return {
@@ -46,4 +50,3 @@ export async function loginService(input: LoginInput) {
     },
   };
 }
-

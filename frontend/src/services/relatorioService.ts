@@ -3,6 +3,7 @@ import type {
   ClosedReportsFilters,
   PaginatedResponse,
   Relatorio,
+  RelatorioClockSnapshot,
   RelatorioItem,
   RelatorioItemEditableFields,
   RelatorioResumo,
@@ -14,6 +15,21 @@ export async function getRelatorioHoje(token: string): Promise<Relatorio> {
 
 export async function getRelatorioAberto(token: string): Promise<Relatorio> {
   return apiRequest<Relatorio>("/api/relatorios/aberto", { token });
+}
+
+export async function getRelatorioClock(token: string): Promise<RelatorioClockSnapshot> {
+  return apiRequest<RelatorioClockSnapshot>(`/api/relatorios/relogio?t=${Date.now()}`, { token });
+}
+
+export async function setRelatorioClockSimulation(
+  start: string | null,
+  token: string,
+): Promise<RelatorioClockSnapshot> {
+  return apiRequest<RelatorioClockSnapshot>("/api/relatorios/relogio/simulacao", {
+    method: "POST",
+    body: { start },
+    token,
+  });
 }
 
 export async function createNovoRelatorio(token: string): Promise<Relatorio> {

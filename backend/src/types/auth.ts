@@ -12,6 +12,7 @@ export type AuthTokenPayload = {
   usuario: string | null;
   email: string | null;
   turno: TurnoUsuario | null;
+  sessionId: string;
 };
 
 export type AuthenticatedUser = {
