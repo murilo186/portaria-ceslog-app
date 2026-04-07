@@ -4,6 +4,7 @@ export interface RelatorioItem {
   descricao: string;
   turno: string;
   horario: string;
+  responsavel: string;
   usuarioId: string;
   criadoEm: string;
 }
