@@ -1,6 +1,7 @@
 ﻿import {
   createRelatorioItem,
-  deleteRelatorioItem,  getRelatorioAberto,
+  deleteRelatorioItem,
+  getRelatorioAberto,
   getRelatorioClock,
   setRelatorioClockSimulation,
   updateRelatorioItem,
@@ -8,7 +9,7 @@
 import { getAuthSession } from "../../services/authStorage";
 import { ApiError } from "../../services/api";
 import { getUserErrorMessage } from "../../services/errorService";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
@@ -59,6 +60,7 @@ export default function RelatorioPage() {
 
   const [itens, setItens] = useState<RelatorioItem[]>([]);
   const [relatorioId, setRelatorioId] = useState<number | null>(null);
+  const [clockBusinessKey, setClockBusinessKey] = useState<string | null>(null);
   const [relatorioStatus, setRelatorioStatus] = useState<"ABERTO" | "FECHADO">("ABERTO");
   const [turnoAtual, setTurnoAtual] = useState<string>("-");
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
@@ -75,6 +77,7 @@ export default function RelatorioPage() {
   const [countdownMinutes, setCountdownMinutes] = useState<number | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
   const [clockSimulationStart, setClockSimulationStart] = useState<string | null>(null);
+  const autoRedirectTriggeredRef = useRef(false);
   const showSimulationControls = import.meta.env.DEV;
 
   useEffect(() => {
@@ -95,6 +98,8 @@ export default function RelatorioPage() {
       try {
         const relatorio = await getRelatorioAberto(authSession.token);
         setRelatorioId(relatorio.id);
+        setClockBusinessKey(null);
+        autoRedirectTriggeredRef.current = false;
         setRelatorioStatus(relatorio.status);
         setItens(relatorio.itens);
       } catch (error) {
@@ -143,6 +148,28 @@ export default function RelatorioPage() {
           setCountdownMinutes(null);
           setCountdownSeconds(null);
         }
+
+        if (!clockBusinessKey) {
+          setClockBusinessKey(snapshot.businessDateKey);
+          return;
+        }
+
+        const viradaDetectada = snapshot.businessDateKey !== clockBusinessKey;
+        if (viradaDetectada && !autoRedirectTriggeredRef.current) {
+          autoRedirectTriggeredRef.current = true;
+          setRelatorioStatus("FECHADO");
+          setFeedback({
+            type: "success",
+            message: "Relatório fechado automaticamente à meia-noite. Redirecionando...",
+          });
+
+          window.setTimeout(() => {
+            navigate("/dashboard", {
+              replace: true,
+              state: { message: "Relatório anterior fechado automaticamente à meia-noite." },
+            });
+          }, 800);
+        }
       } catch {
         setCountdownMinutes(null);
         setCountdownSeconds(null);
@@ -158,7 +185,7 @@ export default function RelatorioPage() {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [relatorioId, relatorioStatus, token]);
+  }, [clockBusinessKey, navigate, relatorioId, relatorioStatus, token]);
 
   const isReadOnly = relatorioStatus === "FECHADO";
 
@@ -182,17 +209,6 @@ export default function RelatorioPage() {
     return item.usuarioId === usuarioLogado.id;
   };
 
-  const applyCurrentTime = (field: "horaEntrada" | "horaSaida", mode: "create" | "edit") => {
-    const currentTime = getCurrentTime();
-
-    if (mode === "create") {
-      setFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
-      return;
-    }
-
-    setEditFormValues((prevValues) => ({ ...prevValues, [field]: currentTime }));
-  };
-
   const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -201,7 +217,11 @@ export default function RelatorioPage() {
     }
 
     const normalizedPayload = normalizeRelatorioPayload(formValues);
-    const errors = validateRelatorioPayload(normalizedPayload);
+    const payloadToCreate: RelatorioItemEditableFields = {
+      ...normalizedPayload,
+      horaEntrada: normalizedPayload.horaEntrada?.trim() ? normalizedPayload.horaEntrada : getCurrentTime(),
+    };
+    const errors = validateRelatorioPayload(payloadToCreate);
 
     if (errors.length > 0) {
       setFeedback({ type: "error", message: errors.join(" ") });
@@ -212,7 +232,7 @@ export default function RelatorioPage() {
     setFeedback(null);
 
     try {
-      const createdItem = await createRelatorioItem(relatorioId, normalizedPayload, token);
+      const createdItem = await createRelatorioItem(relatorioId, payloadToCreate, token);
       setItens((prevItens) => [createdItem, ...prevItens]);
       resetCreateForm();
       setFeedback({ type: "success", message: "Registro adicionado com sucesso." });
@@ -224,6 +244,20 @@ export default function RelatorioPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCreateFormKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (target?.tagName !== "TEXTAREA") {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.requestSubmit();
   };
 
   const handleOpenEditModal = (item: RelatorioItem) => {
@@ -318,6 +352,43 @@ export default function RelatorioPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleQuickSetSaida = async (item: RelatorioItem) => {
+    if (!token || !relatorioId || isReadOnly) {
+      return;
+    }
+
+    if (!canManageItem(item)) {
+      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const payload: RelatorioItemEditableFields = {
+        perfilPessoa: item.perfilPessoa,
+        empresa: item.empresa,
+        placaVeiculo: item.placaVeiculo,
+        nome: item.nome,
+        horaEntrada: item.horaEntrada ?? getCurrentTime(),
+        horaSaida: getCurrentTime(),
+        observacoes: item.observacoes ?? "",
+      };
+
+      const updatedItem = await updateRelatorioItem(relatorioId, item.id, payload, token);
+      setItens((prevItens) => prevItens.map((currentItem) => (currentItem.id === item.id ? updatedItem : currentItem)));
+      setFeedback({ type: "success", message: "Saída atualizada com sucesso." });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: getUserErrorMessage(error, "Erro ao atualizar horário de saída"),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const handleSimulateClockStart = async (start: string) => {
     if (!token || !relatorioId || isReadOnly) {
       return;
@@ -328,6 +399,7 @@ export default function RelatorioPage() {
 
     try {
       const snapshot = await setRelatorioClockSimulation(start, token);
+      setClockBusinessKey(snapshot.businessDateKey);
       setClockSimulationStart(snapshot.simulationStart);
 
       if (snapshot.showCountdown) {
@@ -373,6 +445,7 @@ export default function RelatorioPage() {
           <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
           <p className="text-xs text-text-700">Turno aplicado automaticamente: {turnoAtual}</p>
           {usuarioLogado ? <p className="text-xs text-text-700">Autor automático: {usuarioLogado.nome}</p> : null}
+          <p className="text-xs text-text-700">Campos obrigatórios: empresa, placa, nome e perfil.</p>
           {countdownMinutes !== null && countdownSeconds !== null ? (
             <p className="text-sm font-semibold text-amber-700">
               Fechamento automático em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
@@ -391,7 +464,7 @@ export default function RelatorioPage() {
         </div>
 
         <Card>
-          <form className="grid grid-cols-2 gap-3 sm:gap-4" onSubmit={handleCreateSubmit}>
+          <form className="grid grid-cols-2 gap-3 sm:gap-4" onSubmit={handleCreateSubmit} onKeyDown={handleCreateFormKeyDown}>
             <Input
               id="empresa"
               label="Empresa"
@@ -400,6 +473,7 @@ export default function RelatorioPage() {
               placeholder="Nome da empresa"
               required
               disabled={isReadOnly}
+              autoFocus
             />
 
             <Input
@@ -452,50 +526,28 @@ export default function RelatorioPage() {
               <label htmlFor="horaEntrada" className="text-sm font-medium text-text-700">
                 Hora de entrada
               </label>
-              <div className="flex gap-2">
-                <input
-                  id="horaEntrada"
-                  type="time"
-                  value={formValues.horaEntrada ?? ""}
-                  onChange={(event) => setFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))}
-                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                  disabled={isReadOnly}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="shrink-0 px-3 py-2 text-xs"
-                  onClick={() => applyCurrentTime("horaEntrada", "create")}
-                  disabled={isReadOnly}
-                >
-                  Agora
-                </Button>
-              </div>
+              <input
+                id="horaEntrada"
+                type="time"
+                value={formValues.horaEntrada ?? ""}
+                onChange={(event) => setFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))}
+                className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                disabled={isReadOnly}
+              />
             </div>
 
             <div className="flex w-full flex-col gap-1.5">
               <label htmlFor="horaSaida" className="text-sm font-medium text-text-700">
                 Hora de saída
               </label>
-              <div className="flex gap-2">
-                <input
-                  id="horaSaida"
-                  type="time"
-                  value={formValues.horaSaida ?? ""}
-                  onChange={(event) => setFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
-                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                  disabled={isReadOnly}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="shrink-0 px-3 py-2 text-xs"
-                  onClick={() => applyCurrentTime("horaSaida", "create")}
-                  disabled={isReadOnly}
-                >
-                  Agora
-                </Button>
-              </div>
+              <input
+                id="horaSaida"
+                type="time"
+                value={formValues.horaSaida ?? ""}
+                onChange={(event) => setFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
+                className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                disabled={isReadOnly}
+              />
             </div>
 
             <div className="col-span-2 flex w-full flex-col gap-1.5">
@@ -515,8 +567,9 @@ export default function RelatorioPage() {
 
             <div className="col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center">
               <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isLoading || isReadOnly}>
-                {isReadOnly ? "Relatório fechado" : "Adicionar registro"}
+                {isReadOnly ? "Relatório fechado" : "Salvar registro"}
               </Button>
+              {!isReadOnly ? <p className="text-xs text-text-700">Atalho: Ctrl+Enter nas observações.</p> : null}
             </div>
           </form>
         </Card>
@@ -540,6 +593,14 @@ export default function RelatorioPage() {
                     <p className="text-sm font-semibold text-text-900">{item.empresa}</p>
                     {canManage ? (
                       <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="rounded-md border border-surface-200 px-2 py-1 text-[11px] font-medium text-text-700 hover:bg-surface-50"
+                          onClick={() => void handleQuickSetSaida(item)}
+                          disabled={isSubmitting}
+                        >
+                          Saída agora
+                        </button>
                         <IconActionButton
                           action="edit"
                           label="Editar registro"
@@ -560,12 +621,11 @@ export default function RelatorioPage() {
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                     <p className="text-sm text-text-700">Nome: {item.nome}</p>
                     <p className="text-sm text-text-700">Placa: {item.placaVeiculo}</p>
-                    <p className="text-sm text-text-700">Perfil: {perfilPessoaLabel(item.perfilPessoa)}</p>
                     <p className="text-sm text-text-700">Entrada: {item.horaEntrada ?? "-"}</p>
                     <p className="text-sm text-text-700">Saída: {item.horaSaida ?? "-"}</p>
+                    <p className="text-sm text-text-700">Perfil: {perfilPessoaLabel(item.perfilPessoa)}</p>
                     <p className="text-sm text-text-700">Turno: {item.turno ?? "-"}</p>
                     <p className="col-span-2 text-sm text-text-700">Autor: {getAutorLabel(item, usuarioLogado)}</p>
-                    <p className="col-span-2 text-sm text-text-700">Obs.: {item.observacoes ?? "-"}</p>
                   </div>
 
                   {!canManage ? (
@@ -716,52 +776,30 @@ export default function RelatorioPage() {
                 <label htmlFor="edit-horaEntrada" className="text-sm font-medium text-text-700">
                   Hora de entrada
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    id="edit-horaEntrada"
-                    type="time"
-                    value={editFormValues.horaEntrada ?? ""}
-                    onChange={(event) =>
-                      setEditFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))
-                    }
-                    className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                    disabled={isReadOnly}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="shrink-0 px-3 py-2 text-xs"
-                    onClick={() => applyCurrentTime("horaEntrada", "edit")}
-                    disabled={isReadOnly}
-                  >
-                    Agora
-                  </Button>
-                </div>
+                <input
+                  id="edit-horaEntrada"
+                  type="time"
+                  value={editFormValues.horaEntrada ?? ""}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({ ...prev, horaEntrada: event.target.value }))
+                  }
+                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
+                />
               </div>
 
               <div className="flex w-full flex-col gap-1.5">
                 <label htmlFor="edit-horaSaida" className="text-sm font-medium text-text-700">
                   Hora de saída
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    id="edit-horaSaida"
-                    type="time"
-                    value={editFormValues.horaSaida ?? ""}
-                    onChange={(event) => setEditFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
-                    className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                    disabled={isReadOnly}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="shrink-0 px-3 py-2 text-xs"
-                    onClick={() => applyCurrentTime("horaSaida", "edit")}
-                    disabled={isReadOnly}
-                  >
-                    Agora
-                  </Button>
-                </div>
+                <input
+                  id="edit-horaSaida"
+                  type="time"
+                  value={editFormValues.horaSaida ?? ""}
+                  onChange={(event) => setEditFormValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
+                  className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  disabled={isReadOnly}
+                />
               </div>
 
               <div className="col-span-2 flex w-full flex-col gap-1.5">
@@ -801,6 +839,8 @@ export default function RelatorioPage() {
     </>
   );
 }
+
+
 
 
 
