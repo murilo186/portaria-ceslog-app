@@ -1,5 +1,6 @@
-﻿import Button from "../../components/Button";
+import Button from "../../components/Button";
 import Card from "../../components/Card";
+import Input from "../../components/Input";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, useRegistrosPage } from "./hooks/useRegistrosPage";
 
@@ -30,30 +31,16 @@ export default function RegistrosPage() {
 
       <Card className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="filtro-data" className="text-sm font-medium text-text-700">
-              Data
-            </label>
-            <input
-              id="filtro-data"
-              type="date"
-              value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value)}
-              className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-            />
-          </div>
+          <Input id="filtro-data" type="date" label="Data" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
 
-          <div className="flex flex-col gap-1.5 md:col-span-2">
-            <label htmlFor="filtro-busca" className="text-sm font-medium text-text-700">
-              Busca por placa ou nome
-            </label>
-            <input
+          <div className="md:col-span-2">
+            <Input
               id="filtro-busca"
               type="search"
+              label="Busca por placa ou nome"
               value={searchFilter}
               onChange={(event) => setSearchFilter(event.target.value)}
               placeholder="Ex.: ABC-1D23 ou João"
-              className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
         </div>
