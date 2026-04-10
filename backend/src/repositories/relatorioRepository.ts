@@ -144,21 +144,19 @@ export async function findReportById(relatorioId: number) {
   });
 }
 
-export async function createRelatorioItemWithUsuario(data: Prisma.RelatorioItemUncheckedCreateInput) {
+export async function findReportStatusById(relatorioId: number) {
+  return prisma.relatorio.findUnique({
+    where: { id: relatorioId },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+}
+
+export async function createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput) {
   return prisma.relatorioItem.create({
     data,
-    include: {
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
   });
 }
 
@@ -181,25 +179,13 @@ export async function findManagedItem(itemId: number) {
   });
 }
 
-export async function updateRelatorioItemWithUsuario(
+export async function updateRelatorioItem(
   itemId: number,
   data: Prisma.RelatorioItemUncheckedUpdateInput,
 ) {
   return prisma.relatorioItem.update({
     where: { id: itemId },
     data,
-    include: {
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
   });
 }
 
