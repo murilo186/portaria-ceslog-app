@@ -21,6 +21,7 @@ import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
 import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
 import { getBusinessDateKey } from "../utils/date";
+import { sanitizeNullableText, sanitizeText } from "../utils/sanitize";
 
 const CLOSED_REPORTS_CACHE_PREFIX = "relatorios:fechados:";
 const REPORT_DETAIL_CACHE_PREFIX = "relatorio:detalhe:";
@@ -255,15 +256,6 @@ export async function getReportByIdService(relatorioId: number) {
   return relatorio;
 }
 
-function parseNullableString(value?: string): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const cleaned = value.trim();
-  return cleaned.length > 0 ? cleaned : null;
-}
-
 export async function createRelatorioItemService(
   relatorioId: number,
   payload: RelatorioItemEditableInput,
@@ -283,12 +275,12 @@ export async function createRelatorioItemService(
     relatorioId: relatorio.id,
     usuarioId: user.id,
     perfilPessoa: payload.perfilPessoa,
-    empresa: payload.empresa.trim(),
+    empresa: sanitizeText(payload.empresa),
     placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-    nome: payload.nome.trim(),
-    horaEntrada: parseNullableString(payload.horaEntrada),
-    horaSaida: parseNullableString(payload.horaSaida),
-    observacoes: parseNullableString(payload.observacoes),
+    nome: sanitizeText(payload.nome),
+    horaEntrada: sanitizeNullableText(payload.horaEntrada),
+    horaSaida: sanitizeNullableText(payload.horaSaida),
+    observacoes: sanitizeNullableText(payload.observacoes),
     turno: user.turno,
   });
 
@@ -332,12 +324,12 @@ export async function updateRelatorioItemService(
 
   const updated = await updateRelatorioItemWithUsuario(item.id, {
     perfilPessoa: payload.perfilPessoa,
-    empresa: payload.empresa.trim(),
+    empresa: sanitizeText(payload.empresa),
     placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-    nome: payload.nome.trim(),
-    horaEntrada: parseNullableString(payload.horaEntrada),
-    horaSaida: parseNullableString(payload.horaSaida),
-    observacoes: parseNullableString(payload.observacoes),
+    nome: sanitizeText(payload.nome),
+    horaEntrada: sanitizeNullableText(payload.horaEntrada),
+    horaSaida: sanitizeNullableText(payload.horaSaida),
+    observacoes: sanitizeNullableText(payload.observacoes),
   });
 
   invalidateRelatorioReadCaches(item.relatorioId);

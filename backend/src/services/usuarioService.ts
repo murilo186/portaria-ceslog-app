@@ -1,6 +1,7 @@
 ﻿import { AppError } from "../middlewares/errorMiddleware";
 import { prisma } from "../lib/prisma";
 import type { CreateUsuarioInput } from "../types/usuario";
+import { sanitizeText } from "../utils/sanitize";
 import bcrypt from "bcryptjs";
 
 const usuarioRegex = /^[a-z0-9._-]{3,30}$/;
@@ -10,7 +11,7 @@ function normalizeUsuario(value: string): string {
 }
 
 function normalizeNome(value: string): string {
-  return value.trim();
+  return sanitizeText(value);
 }
 
 function buildInternalEmail(usuario: string): string {

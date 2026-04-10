@@ -115,6 +115,45 @@ describe("relatorioService regras críticas", () => {
     });
   });
 
+  it("sanitiza campos textuais para reduzir risco de XSS armazenado", async () => {
+    relatorioFindUniqueMock.mockResolvedValue({
+      id: 11,
+      status: "ABERTO",
+    });
+    relatorioItemCreateMock.mockResolvedValue({
+      id: 30,
+      relatorioId: 11,
+      usuarioId: 1,
+      perfilPessoa: "VISITANTE",
+      empresa: "Empresa teste",
+      placaVeiculo: "ABC1D23",
+      nome: "Nome teste",
+      observacoes: "Observacao teste",
+    });
+
+    await createRelatorioItemService(
+      11,
+      {
+        perfilPessoa: "VISITANTE",
+        empresa: "  <b>Empresa</b> teste  ",
+        placaVeiculo: " abc1d23 ",
+        nome: "<script>alert(1)</script>Nome teste",
+        observacoes: "<img src=x onerror=alert(1)>Observacao teste",
+      },
+      operador,
+    );
+
+    expect(relatorioItemCreateMock).toHaveBeenCalledTimes(1);
+
+    const [callArg] = relatorioItemCreateMock.mock.calls[0] as [{ data: Record<string, unknown> }];
+    const payload = callArg.data;
+
+    expect(payload.empresa).toBe("Empresa teste");
+    expect(payload.nome).toBe("alert(1) Nome teste");
+    expect(payload.observacoes).toBe("Observacao teste");
+    expect(payload.placaVeiculo).toBe("ABC1D23");
+  });
+
   it("bloqueia edição por usuário que não é autor nem admin", async () => {
     relatorioItemFindUniqueMock.mockResolvedValue({
       id: 20,
