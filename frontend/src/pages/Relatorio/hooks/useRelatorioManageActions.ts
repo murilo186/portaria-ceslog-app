@@ -1,10 +1,10 @@
 import { deleteRelatorioItem, updateRelatorioItem } from "../../../services/relatorioService";
 import { getUserErrorMessage } from "../../../services/errorService";
-import { useState, type FormEvent } from "react";
-import type { RelatorioItem, RelatorioItemEditableFields } from "../../../types/relatorio";
-import { normalizeRelatorioPayload, validateRelatorioPayload } from "../../../utils/relatorioForm";
-import { buildQuickSetSaidaPayload, initialFormValues, mapItemToFormValues } from "./relatorioPageHelpers";
+import { useCallback } from "react";
+import type { RelatorioItem } from "../../../types/relatorio";
+import { buildQuickSetSaidaPayload } from "./relatorioPageHelpers";
 import type { RelatorioManageContext } from "./relatorioItemActions.types";
+import { useRelatorioEditActions } from "./useRelatorioEditActions";
 
 export function useRelatorioManageActions({
   token,
@@ -15,72 +15,30 @@ export function useRelatorioManageActions({
   setFeedback,
   setIsSubmitting,
 }: RelatorioManageContext) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
-  const [editFormValues, setEditFormValues] = useState<RelatorioItemEditableFields>(initialFormValues);
+  const editActions = useRelatorioEditActions({
+    token,
+    relatorioId,
+    isReadOnly,
+    setItens,
+    canManageItem,
+    setFeedback,
+    setIsSubmitting,
+  });
 
-  const handleOpenEditModal = (item: RelatorioItem) => {
-    if (isReadOnly) {
-      setFeedback({ type: "error", message: "Relatório fechado. Edição indisponível." });
-      return;
-    }
+  const canMutateItem = useCallback(
+    (item: RelatorioItem): boolean => {
+      if (!canManageItem(item)) {
+        setFeedback({ type: "error", message: "Voce so pode editar registros da sua autoria." });
+        return false;
+      }
 
-    if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
-      return;
-    }
-
-    setEditingItemId(item.id);
-    setEditFormValues(mapItemToFormValues(item));
-    setIsEditModalOpen(true);
-  };
-
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingItemId(null);
-    setEditFormValues(initialFormValues);
-  };
-
-  const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!token || !relatorioId || editingItemId === null || isReadOnly) {
-      return;
-    }
-
-    const normalizedPayload = normalizeRelatorioPayload(editFormValues);
-    const errors = validateRelatorioPayload(normalizedPayload);
-
-    if (errors.length > 0) {
-      setFeedback({ type: "error", message: errors.join(" ") });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFeedback(null);
-
-    try {
-      const updatedItem = await updateRelatorioItem(relatorioId, editingItemId, normalizedPayload, token);
-      setItens((prevItens) => prevItens.map((item) => (item.id === editingItemId ? updatedItem : item)));
-      handleCloseEditModal();
-      setFeedback({ type: "success", message: "Registro atualizado com sucesso." });
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: getUserErrorMessage(error, "Erro ao atualizar item"),
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      return true;
+    },
+    [canManageItem, setFeedback],
+  );
 
   const handleDelete = async (item: RelatorioItem) => {
-    if (!token || !relatorioId || isReadOnly) {
-      return;
-    }
-
-    if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode excluir registros da sua autoria." });
+    if (!token || !relatorioId || isReadOnly || !canMutateItem(item)) {
       return;
     }
 
@@ -90,10 +48,10 @@ export function useRelatorioManageActions({
     try {
       await deleteRelatorioItem(relatorioId, item.id, token);
       setItens((prevItens) => prevItens.filter((currentItem) => currentItem.id !== item.id));
-      if (editingItemId === item.id) {
-        handleCloseEditModal();
+      if (editActions.editingItemId === item.id) {
+        editActions.handleCloseEditModal();
       }
-      setFeedback({ type: "success", message: "Registro excluído com sucesso." });
+      setFeedback({ type: "success", message: "Registro excluido com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
@@ -105,12 +63,7 @@ export function useRelatorioManageActions({
   };
 
   const handleQuickSetSaida = async (item: RelatorioItem) => {
-    if (!token || !relatorioId || isReadOnly) {
-      return;
-    }
-
-    if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
+    if (!token || !relatorioId || isReadOnly || !canMutateItem(item)) {
       return;
     }
 
@@ -121,11 +74,11 @@ export function useRelatorioManageActions({
       const payload = buildQuickSetSaidaPayload(item);
       const updatedItem = await updateRelatorioItem(relatorioId, item.id, payload, token);
       setItens((prevItens) => prevItens.map((currentItem) => (currentItem.id === item.id ? updatedItem : currentItem)));
-      setFeedback({ type: "success", message: "Saída atualizada com sucesso." });
+      setFeedback({ type: "success", message: "Saida atualizada com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
-        message: getUserErrorMessage(error, "Erro ao atualizar horário de saída"),
+        message: getUserErrorMessage(error, "Erro ao atualizar horario de saida"),
       });
     } finally {
       setIsSubmitting(false);
@@ -133,12 +86,12 @@ export function useRelatorioManageActions({
   };
 
   return {
-    isEditModalOpen,
-    editFormValues,
-    setEditFormValues,
-    handleOpenEditModal,
-    handleCloseEditModal,
-    handleEditSubmit,
+    isEditModalOpen: editActions.isEditModalOpen,
+    editFormValues: editActions.editFormValues,
+    setEditFormValues: editActions.setEditFormValues,
+    handleOpenEditModal: editActions.handleOpenEditModal,
+    handleCloseEditModal: editActions.handleCloseEditModal,
+    handleEditSubmit: editActions.handleEditSubmit,
     handleDelete,
     handleQuickSetSaida,
   };

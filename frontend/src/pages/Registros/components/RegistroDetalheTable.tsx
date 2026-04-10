@@ -2,7 +2,7 @@ import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
 import { perfilPessoaLabel } from "../../../utils/perfilPessoa";
 import type { Relatorio } from "../../../types/relatorio";
-import type { ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 
 type RegistroDetalheTableProps = {
   relatorio: Relatorio | null;
@@ -13,7 +13,7 @@ type RegistroDetalheTableProps = {
   getAutorLabel: (item: Relatorio["itens"][number]) => string;
 };
 
-export default function RegistroDetalheTable({
+function RegistroDetalheTable({
   relatorio,
   isLoading,
   isAdmin,
@@ -21,6 +21,31 @@ export default function RegistroDetalheTable({
   renderHighlightedText,
   getAutorLabel,
 }: RegistroDetalheTableProps) {
+  const renderedRows = useMemo(() => {
+    if (!relatorio || relatorio.itens.length === 0) {
+      return null;
+    }
+
+    return relatorio.itens.map((item) => (
+      <tr key={item.id}>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.empresa, appliedSearchFilter)}</td>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.placaVeiculo, appliedSearchFilter)}</td>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.nome, appliedSearchFilter)}</td>
+        <td className="px-4 py-3 text-sm text-text-900">
+          {renderHighlightedText(perfilPessoaLabel(item.perfilPessoa), appliedSearchFilter)}
+        </td>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.horaEntrada ?? "-", appliedSearchFilter)}</td>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.horaSaida ?? "-", appliedSearchFilter)}</td>
+        <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(getAutorLabel(item), appliedSearchFilter)}</td>
+        {isAdmin ? (
+          <td className="px-4 py-3 text-sm text-text-900">
+            <IconActionButton action="edit" label="Editar registro" disabled />
+          </td>
+        ) : null}
+      </tr>
+    ));
+  }, [appliedSearchFilter, getAutorLabel, isAdmin, relatorio, renderHighlightedText]);
+
   return (
     <Card className="p-0">
       <div className="overflow-x-auto">
@@ -50,29 +75,12 @@ export default function RegistroDetalheTable({
                   Nenhum item neste registro.
                 </td>
               </tr>
-            ) : (
-              relatorio.itens.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.empresa, appliedSearchFilter)}</td>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.placaVeiculo, appliedSearchFilter)}</td>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.nome, appliedSearchFilter)}</td>
-                  <td className="px-4 py-3 text-sm text-text-900">
-                    {renderHighlightedText(perfilPessoaLabel(item.perfilPessoa), appliedSearchFilter)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.horaEntrada ?? "-", appliedSearchFilter)}</td>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.horaSaida ?? "-", appliedSearchFilter)}</td>
-                  <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(getAutorLabel(item), appliedSearchFilter)}</td>
-                  {isAdmin ? (
-                    <td className="px-4 py-3 text-sm text-text-900">
-                      <IconActionButton action="edit" label="Editar registro" disabled />
-                    </td>
-                  ) : null}
-                </tr>
-              ))
-            )}
+            ) : renderedRows}
           </tbody>
         </table>
       </div>
     </Card>
   );
 }
+
+export default memo(RegistroDetalheTable);

@@ -1,5 +1,7 @@
 import Button from "../../../components/Button";
+import FeedbackMessage from "../../../components/FeedbackMessage";
 import StatusBadge from "../../../components/StatusBadge";
+import { memo } from "react";
 import { formatDate } from "../hooks/useRegistroDetalhePage";
 
 type RegistroDetalheHeaderProps = {
@@ -15,7 +17,7 @@ type RegistroDetalheHeaderProps = {
   onDownloadCsv: () => void;
 };
 
-export default function RegistroDetalheHeader({
+function RegistroDetalheHeader({
   status,
   dataRelatorio,
   isLoading,
@@ -49,10 +51,12 @@ export default function RegistroDetalheHeader({
       {!isAdmin ? <p className="text-xs text-text-700">Somente administradores podem editar registros fechados.</p> : null}
       {appliedSearchFilter ? (
         <p className="text-xs text-text-700">
-          {totalOccurrences} ocorrência(s) em {matchedItems} item(ns) para "{appliedSearchFilter}".
+          {totalOccurrences} ocorrencias em {matchedItems} item(ns) para "{appliedSearchFilter}".
         </p>
       ) : null}
-      {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+      {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
     </div>
   );
 }
+
+export default memo(RegistroDetalheHeader);

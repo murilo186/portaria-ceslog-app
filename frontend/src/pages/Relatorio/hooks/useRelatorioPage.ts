@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { RelatorioItem } from "../../../types/relatorio";
 import type { FeedbackState } from "../types";
 import { getAutorLabel } from "./relatorioPageHelpers";
@@ -33,7 +33,7 @@ export function useRelatorioPage() {
 
   const isReadOnly = relatorioStatus === "FECHADO";
 
-  const canManageItem = (item: RelatorioItem): boolean => {
+  const canManageItem = useCallback((item: RelatorioItem): boolean => {
     if (!usuarioLogado) {
       return false;
     }
@@ -43,7 +43,7 @@ export function useRelatorioPage() {
     }
 
     return item.usuarioId === usuarioLogado.id;
-  };
+  }, [usuarioLogado]);
 
   const sortedItens = useMemo(() => {
     return [...itens].sort((a, b) => b.id - a.id);
@@ -75,7 +75,10 @@ export function useRelatorioPage() {
     defaultSimulationStart,
   });
 
-  const getAutorLabelForItem = (item: RelatorioItem) => getAutorLabel(item, usuarioLogado);
+  const getAutorLabelForItem = useCallback(
+    (item: RelatorioItem) => getAutorLabel(item, usuarioLogado),
+    [usuarioLogado],
+  );
 
   return {
     showSimulationControls,

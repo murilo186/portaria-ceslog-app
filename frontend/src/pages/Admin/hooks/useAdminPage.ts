@@ -1,5 +1,6 @@
 import { getAuthSession } from "../../../services/authStorage";
-import { useMemo, useState } from "react";
+import type { TurnoUsuario } from "../../../types/usuario";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Feedback } from "./adminPage.types";
 import { useAdminData } from "./useAdminData";
@@ -45,7 +46,7 @@ export function useAdminPage() {
       return;
     }
 
-    await loadLogs(auth.token);
+    await loadLogs(auth.token, auth.usuario.id);
   };
 
   const { isSubmittingUsuario, novoUsuarioForm, setNovoUsuarioForm, handleCreateUsuario, handleDeleteUsuario } =
@@ -65,6 +66,22 @@ export function useAdminPage() {
     navigate(`/registros/${reportId}`);
   };
 
+  const handleChangeNovoUsuarioNome = useCallback((value: string) => {
+    setNovoUsuarioForm((prev) => ({ ...prev, nome: value }));
+  }, [setNovoUsuarioForm]);
+
+  const handleChangeNovoUsuarioLogin = useCallback((value: string) => {
+    setNovoUsuarioForm((prev) => ({ ...prev, usuario: value }));
+  }, [setNovoUsuarioForm]);
+
+  const handleChangeNovoUsuarioSenha = useCallback((value: string) => {
+    setNovoUsuarioForm((prev) => ({ ...prev, senha: value }));
+  }, [setNovoUsuarioForm]);
+
+  const handleChangeNovoUsuarioTurno = useCallback((turno: TurnoUsuario) => {
+    setNovoUsuarioForm((prev) => ({ ...prev, turno }));
+  }, [setNovoUsuarioForm]);
+
   return {
     auth,
     isLoadingRegistros,
@@ -77,6 +94,10 @@ export function useAdminPage() {
     auditLogs,
     novoUsuarioForm,
     setNovoUsuarioForm,
+    handleChangeNovoUsuarioNome,
+    handleChangeNovoUsuarioLogin,
+    handleChangeNovoUsuarioSenha,
+    handleChangeNovoUsuarioTurno,
     handleCreateUsuario,
     handleDeleteUsuario,
     handleRefreshLogs,

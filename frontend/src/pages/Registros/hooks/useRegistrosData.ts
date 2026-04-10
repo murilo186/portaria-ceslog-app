@@ -1,9 +1,10 @@
 import { getAuthSession } from "../../../services/authStorage";
 import { getUserErrorMessage } from "../../../services/errorService";
+import { getCachedValue, setCachedValue } from "../../../services/requestCache";
 import { listRelatoriosFechados } from "../../../services/relatorioService";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
-import type { PaginationMeta, RelatorioResumo } from "../../../types/relatorio";
+import type { PaginatedResponse, PaginationMeta, RelatorioResumo } from "../../../types/relatorio";
 
 type UseRegistrosDataParams = {
   appliedDateFilter: string;
@@ -11,6 +12,12 @@ type UseRegistrosDataParams = {
   meta: PaginationMeta;
   setMeta: Dispatch<SetStateAction<PaginationMeta>>;
 };
+
+const REGISTROS_CACHE_TTL_MS = 20_000;
+
+function getRegistrosCacheKey(appliedDateFilter: string, appliedSearchFilter: string, page: number, pageSize: number) {
+  return `registros:fechados:${page}:${pageSize}:${appliedDateFilter}:${appliedSearchFilter}`;
+}
 
 export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, meta, setMeta }: UseRegistrosDataParams) {
   const navigate = useNavigate();
@@ -25,7 +32,18 @@ export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, meta,
       navigate("/");
       return;
     }
+
     const authSession = auth;
+    const cacheKey = getRegistrosCacheKey(appliedDateFilter, appliedSearchFilter, meta.page, meta.pageSize);
+    const cached = getCachedValue<PaginatedResponse<RelatorioResumo>>(cacheKey);
+
+    if (cached) {
+      setRegistrosFechados(cached.data);
+      setMeta(cached.meta);
+      setIsLoading(false);
+      setErrorMessage(null);
+      return;
+    }
 
     async function loadRegistros() {
       setIsLoading(true);
@@ -41,6 +59,7 @@ export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, meta,
 
         setRegistrosFechados(response.data);
         setMeta(response.meta);
+        setCachedValue(cacheKey, response, REGISTROS_CACHE_TTL_MS);
       } catch (error) {
         setErrorMessage(getUserErrorMessage(error, "Erro ao carregar registros"));
       } finally {

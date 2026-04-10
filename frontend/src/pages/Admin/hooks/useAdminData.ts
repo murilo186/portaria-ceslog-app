@@ -1,4 +1,5 @@
 import { getUserErrorMessage } from "../../../services/errorService";
+import { getCachedValue, setCachedValue } from "../../../services/requestCache";
 import { listRelatoriosFechados } from "../../../services/relatorioService";
 import { listAuditLogs, listUsuarios } from "../../../services/usuarioService";
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
@@ -6,6 +7,12 @@ import type { AuthState } from "../../../types/auth";
 import type { RelatorioResumo } from "../../../types/relatorio";
 import type { AuditLogItem, UsuarioAdminListItem } from "../../../types/usuario";
 import type { Feedback } from "./adminPage.types";
+import {
+  ADMIN_CACHE_TTL_MS,
+  getAdminClosedReportsCacheKey,
+  getAdminLogsCacheKey,
+  getAdminUsersCacheKey,
+} from "./adminCache";
 
 type UseAdminDataParams = {
   auth: AuthState | null;
@@ -23,16 +30,26 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
 
   const loadLogs = useCallback(
-    async (token: string) => {
+    async (token: string, usuarioId: number) => {
       setIsLoadingLogs(true);
+
+      const cacheKey = getAdminLogsCacheKey(usuarioId);
+      const cached = getCachedValue<AuditLogItem[]>(cacheKey);
+
+      if (cached) {
+        setAuditLogs(cached);
+        setIsLoadingLogs(false);
+        return;
+      }
 
       try {
         const data = await listAuditLogs(token, 20);
         setAuditLogs(data);
+        setCachedValue(cacheKey, data, ADMIN_CACHE_TTL_MS);
       } catch (error) {
         setFeedback({
           type: "error",
-          message: getUserErrorMessage(error, "Não foi possível carregar os logs de auditoria."),
+          message: getUserErrorMessage(error, "Nao foi possivel carregar os logs de auditoria."),
         });
       } finally {
         setIsLoadingLogs(false);
@@ -42,8 +59,17 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
   );
 
   const loadRegistros = useCallback(
-    async (token: string) => {
+    async (token: string, usuarioId: number) => {
       setIsLoadingRegistros(true);
+
+      const cacheKey = getAdminClosedReportsCacheKey(usuarioId);
+      const cached = getCachedValue<RelatorioResumo[]>(cacheKey);
+
+      if (cached) {
+        setLatestClosedReports(cached);
+        setIsLoadingRegistros(false);
+        return;
+      }
 
       try {
         const closedResponse = await listRelatoriosFechados(token, {
@@ -52,10 +78,11 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
         });
 
         setLatestClosedReports(closedResponse.data);
+        setCachedValue(cacheKey, closedResponse.data, ADMIN_CACHE_TTL_MS);
       } catch (error) {
         setFeedback({
           type: "error",
-          message: getUserErrorMessage(error, "Não foi possível carregar os registros."),
+          message: getUserErrorMessage(error, "Nao foi possivel carregar os registros."),
         });
       } finally {
         setIsLoadingRegistros(false);
@@ -65,16 +92,26 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
   );
 
   const loadUsuarios = useCallback(
-    async (token: string) => {
+    async (token: string, usuarioId: number) => {
       setIsLoadingUsuarios(true);
+
+      const cacheKey = getAdminUsersCacheKey(usuarioId);
+      const cached = getCachedValue<UsuarioAdminListItem[]>(cacheKey);
+
+      if (cached) {
+        setUsuarios(cached);
+        setIsLoadingUsuarios(false);
+        return;
+      }
 
       try {
         const data = await listUsuarios(token);
         setUsuarios(data);
+        setCachedValue(cacheKey, data, ADMIN_CACHE_TTL_MS);
       } catch (error) {
         setFeedback({
           type: "error",
-          message: getUserErrorMessage(error, "Não foi possível carregar os usuários."),
+          message: getUserErrorMessage(error, "Nao foi possivel carregar os usuarios."),
         });
       } finally {
         setIsLoadingUsuarios(false);
@@ -94,9 +131,11 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
       return;
     }
 
-    void loadRegistros(auth.token);
-    void loadUsuarios(auth.token);
-    void loadLogs(auth.token);
+    const usuarioId = auth.usuario.id;
+
+    void loadRegistros(auth.token, usuarioId);
+    void loadUsuarios(auth.token, usuarioId);
+    void loadLogs(auth.token, usuarioId);
   }, [auth, loadLogs, loadRegistros, loadUsuarios, navigateToDashboard, navigateToLogin]);
 
   return {

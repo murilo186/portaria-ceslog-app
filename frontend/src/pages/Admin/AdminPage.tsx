@@ -17,7 +17,10 @@ export default function AdminPage() {
     usuarios,
     auditLogs,
     novoUsuarioForm,
-    setNovoUsuarioForm,
+    handleChangeNovoUsuarioNome,
+    handleChangeNovoUsuarioLogin,
+    handleChangeNovoUsuarioSenha,
+    handleChangeNovoUsuarioTurno,
     handleCreateUsuario,
     handleDeleteUsuario,
     handleRefreshLogs,
@@ -37,10 +40,10 @@ export default function AdminPage() {
         isSubmittingUsuario={isSubmittingUsuario}
         usuarios={usuarios}
         novoUsuarioForm={novoUsuarioForm}
-        onChangeNome={(value) => setNovoUsuarioForm((prev) => ({ ...prev, nome: value }))}
-        onChangeUsuario={(value) => setNovoUsuarioForm((prev) => ({ ...prev, usuario: value }))}
-        onChangeSenha={(value) => setNovoUsuarioForm((prev) => ({ ...prev, senha: value }))}
-        onChangeTurno={(turno) => setNovoUsuarioForm((prev) => ({ ...prev, turno }))}
+        onChangeNome={handleChangeNovoUsuarioNome}
+        onChangeUsuario={handleChangeNovoUsuarioLogin}
+        onChangeSenha={handleChangeNovoUsuarioSenha}
+        onChangeTurno={handleChangeNovoUsuarioTurno}
         onCreateUsuario={handleCreateUsuario}
         onDeleteUsuario={handleDeleteUsuario}
       />

@@ -1,4 +1,5 @@
 import { getUserErrorMessage } from "../../../services/errorService";
+import { clearCacheByPrefix } from "../../../services/requestCache";
 import { createUsuario, deleteUsuario } from "../../../services/usuarioService";
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import type { AuthState } from "../../../types/auth";
@@ -24,6 +25,11 @@ export function useAdminUserActions({
   const [isSubmittingUsuario, setIsSubmittingUsuario] = useState(false);
   const [novoUsuarioForm, setNovoUsuarioForm] = useState<NovoUsuarioForm>(initialNovoUsuarioForm);
 
+  const invalidateAdminCache = () => {
+    clearCacheByPrefix("admin:users:");
+    clearCacheByPrefix("admin:logs:");
+  };
+
   const handleCreateUsuario = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -46,10 +52,11 @@ export function useAdminUserActions({
       const created = await createUsuario(payload, auth.token);
       setUsuarios((prev) => [created, ...prev]);
       setNovoUsuarioForm(initialNovoUsuarioForm);
-      setFeedback({ type: "success", message: "Usuário criado com sucesso." });
+      invalidateAdminCache();
+      setFeedback({ type: "success", message: "Usuario criado com sucesso." });
       await refreshLogs();
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível criar usuário.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel criar usuario.") });
     } finally {
       setIsSubmittingUsuario(false);
     }
@@ -61,7 +68,7 @@ export function useAdminUserActions({
       return;
     }
 
-    const shouldDelete = window.confirm("Confirma inativar este operador? Ele não conseguirá mais logar.");
+    const shouldDelete = window.confirm("Confirma inativar este operador? Ele nao conseguira mais logar.");
 
     if (!shouldDelete) {
       return;
@@ -73,10 +80,11 @@ export function useAdminUserActions({
     try {
       await deleteUsuario(usuarioId, auth.token);
       setUsuarios((prev) => prev.map((item) => (item.id === usuarioId ? { ...item, ativo: false } : item)));
-      setFeedback({ type: "success", message: "Usuário desativado com sucesso." });
+      invalidateAdminCache();
+      setFeedback({ type: "success", message: "Usuario desativado com sucesso." });
       await refreshLogs();
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível inativar usuário.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel inativar usuario.") });
     } finally {
       setIsSubmittingUsuario(false);
     }

@@ -1,6 +1,7 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import Input from "../../../components/Input";
+import { memo } from "react";
 
 type RegistroDetalheFiltersCardProps = {
   dateFilter: string;
@@ -11,7 +12,7 @@ type RegistroDetalheFiltersCardProps = {
   onClearFilters: () => void;
 };
 
-export default function RegistroDetalheFiltersCard({
+function RegistroDetalheFiltersCard({
   dateFilter,
   searchFilter,
   onChangeDate,
@@ -47,3 +48,5 @@ export default function RegistroDetalheFiltersCard({
     </Card>
   );
 }
+
+export default memo(RegistroDetalheFiltersCard);
