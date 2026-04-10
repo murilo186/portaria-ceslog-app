@@ -1,56 +1,32 @@
-﻿import {
+import {
   createRelatorioItem,
   deleteRelatorioItem,
   getRelatorioAberto,
-  getRelatorioClock,
-  setRelatorioClockSimulation,
   updateRelatorioItem,
 } from "../../../services/relatorioService";
 import { getAuthSession } from "../../../services/authStorage";
 import { ApiError } from "../../../services/api";
 import { getUserErrorMessage } from "../../../services/errorService";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { RelatorioItem, RelatorioItemEditableFields } from "../../../types/relatorio";
 import type { Usuario } from "../../../types/usuario";
 import { normalizeRelatorioPayload, validateRelatorioPayload } from "../../../utils/relatorioForm";
 import type { FeedbackState } from "../types";
-
-const initialFormValues: RelatorioItemEditableFields = {
-  perfilPessoa: "VISITANTE",
-  empresa: "",
-  placaVeiculo: "",
-  nome: "",
-  horaEntrada: "",
-  horaSaida: "",
-  observacoes: "",
-};
-
-function getCurrentTime() {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-
-function getAutorLabel(item: RelatorioItem, fallbackUser: Usuario | null): string {
-  if (item.usuario?.nome) {
-    return item.usuario.nome;
-  }
-
-  if (fallbackUser) {
-    return fallbackUser.nome;
-  }
-
-  return "-";
-}
+import {
+  buildQuickSetSaidaPayload,
+  getAutorLabel,
+  getCurrentTime,
+  initialFormValues,
+  mapItemToFormValues,
+} from "./relatorioPageHelpers";
+import { useRelatorioClock } from "./useRelatorioClock";
 
 export function useRelatorioPage() {
   const navigate = useNavigate();
 
   const [itens, setItens] = useState<RelatorioItem[]>([]);
   const [relatorioId, setRelatorioId] = useState<number | null>(null);
-  const [clockBusinessKey, setClockBusinessKey] = useState<string | null>(null);
   const [relatorioStatus, setRelatorioStatus] = useState<"ABERTO" | "FECHADO">("ABERTO");
   const [turnoAtual, setTurnoAtual] = useState<string>("-");
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
@@ -64,11 +40,15 @@ export function useRelatorioPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [countdownMinutes, setCountdownMinutes] = useState<number | null>(null);
-  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
-  const [clockSimulationStart, setClockSimulationStart] = useState<string | null>(null);
-  const autoRedirectTriggeredRef = useRef(false);
   const showSimulationControls = import.meta.env.DEV;
+  const { countdownMinutes, countdownSeconds, clockSimulationStart, startSimulation, defaultSimulationStart } =
+    useRelatorioClock({
+      token,
+      relatorioId,
+      relatorioStatus,
+      setRelatorioStatus,
+      setFeedback,
+    });
 
   useEffect(() => {
     const auth = getAuthSession();
@@ -88,22 +68,20 @@ export function useRelatorioPage() {
       try {
         const relatorio = await getRelatorioAberto(authSession.token);
         setRelatorioId(relatorio.id);
-        setClockBusinessKey(null);
-        autoRedirectTriggeredRef.current = false;
         setRelatorioStatus(relatorio.status);
         setItens(relatorio.itens);
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           navigate("/dashboard", {
             replace: true,
-            state: { message: "Não existe relatório em aberto para continuar." },
+            state: { message: "NÃ£o existe relatÃ³rio em aberto para continuar." },
           });
           return;
         }
 
         setFeedback({
           type: "error",
-          message: getUserErrorMessage(error, "Erro ao carregar relatório"),
+          message: getUserErrorMessage(error, "Erro ao carregar relatÃ³rio"),
         });
       } finally {
         setIsLoading(false);
@@ -112,70 +90,6 @@ export function useRelatorioPage() {
 
     void loadRelatorio();
   }, [navigate]);
-
-  useEffect(() => {
-    if (!token || !relatorioId || relatorioStatus === "FECHADO") {
-      return;
-    }
-
-    let cancelled = false;
-
-    const syncClock = async () => {
-      try {
-        const snapshot = await getRelatorioClock(token);
-
-        if (cancelled) {
-          return;
-        }
-
-        setClockSimulationStart(snapshot.simulationEnabled ? snapshot.simulationStart : null);
-
-        if (snapshot.showCountdown) {
-          const totalSeconds = Math.max(0, Math.ceil(snapshot.msToMidnight / 1000));
-          setCountdownMinutes(Math.floor(totalSeconds / 60));
-          setCountdownSeconds(totalSeconds % 60);
-        } else {
-          setCountdownMinutes(null);
-          setCountdownSeconds(null);
-        }
-
-        if (!clockBusinessKey) {
-          setClockBusinessKey(snapshot.businessDateKey);
-          return;
-        }
-
-        const viradaDetectada = snapshot.businessDateKey !== clockBusinessKey;
-        if (viradaDetectada && !autoRedirectTriggeredRef.current) {
-          autoRedirectTriggeredRef.current = true;
-          setRelatorioStatus("FECHADO");
-          setFeedback({
-            type: "success",
-            message: "Relatório fechado automaticamente à meia-noite. Redirecionando...",
-          });
-
-          window.setTimeout(() => {
-            navigate("/dashboard", {
-              replace: true,
-              state: { message: "Relatório anterior fechado automaticamente à meia-noite." },
-            });
-          }, 800);
-        }
-      } catch {
-        setCountdownMinutes(null);
-        setCountdownSeconds(null);
-      }
-    };
-
-    void syncClock();
-    const intervalId = window.setInterval(() => {
-      void syncClock();
-    }, 1000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [clockBusinessKey, navigate, relatorioId, relatorioStatus, token]);
 
   const isReadOnly = relatorioStatus === "FECHADO";
 
@@ -248,25 +162,17 @@ export function useRelatorioPage() {
 
   const handleOpenEditModal = (item: RelatorioItem) => {
     if (isReadOnly) {
-      setFeedback({ type: "error", message: "Relatório fechado. Edição indisponível." });
+      setFeedback({ type: "error", message: "RelatÃ³rio fechado. EdiÃ§Ã£o indisponÃ­vel." });
       return;
     }
 
     if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
+      setFeedback({ type: "error", message: "VocÃª sÃ³ pode editar registros da sua autoria." });
       return;
     }
 
     setEditingItemId(item.id);
-    setEditFormValues({
-      perfilPessoa: item.perfilPessoa,
-      empresa: item.empresa,
-      placaVeiculo: item.placaVeiculo,
-      nome: item.nome,
-      horaEntrada: item.horaEntrada ?? "",
-      horaSaida: item.horaSaida ?? "",
-      observacoes: item.observacoes ?? "",
-    });
+    setEditFormValues(mapItemToFormValues(item));
     setIsEditModalOpen(true);
   };
 
@@ -315,7 +221,7 @@ export function useRelatorioPage() {
     }
 
     if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode excluir registros da sua autoria." });
+      setFeedback({ type: "error", message: "VocÃª sÃ³ pode excluir registros da sua autoria." });
       return;
     }
 
@@ -328,7 +234,7 @@ export function useRelatorioPage() {
       if (editingItemId === item.id) {
         handleCloseEditModal();
       }
-      setFeedback({ type: "success", message: "Registro excluído com sucesso." });
+      setFeedback({ type: "success", message: "Registro excluÃ­do com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
@@ -345,7 +251,7 @@ export function useRelatorioPage() {
     }
 
     if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
+      setFeedback({ type: "error", message: "VocÃª sÃ³ pode editar registros da sua autoria." });
       return;
     }
 
@@ -353,23 +259,14 @@ export function useRelatorioPage() {
     setFeedback(null);
 
     try {
-      const payload: RelatorioItemEditableFields = {
-        perfilPessoa: item.perfilPessoa,
-        empresa: item.empresa,
-        placaVeiculo: item.placaVeiculo,
-        nome: item.nome,
-        horaEntrada: item.horaEntrada ?? getCurrentTime(),
-        horaSaida: getCurrentTime(),
-        observacoes: item.observacoes ?? "",
-      };
-
+      const payload = buildQuickSetSaidaPayload(item);
       const updatedItem = await updateRelatorioItem(relatorioId, item.id, payload, token);
       setItens((prevItens) => prevItens.map((currentItem) => (currentItem.id === item.id ? updatedItem : currentItem)));
-      setFeedback({ type: "success", message: "Saída atualizada com sucesso." });
+      setFeedback({ type: "success", message: "SaÃ­da atualizada com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
-        message: getUserErrorMessage(error, "Erro ao atualizar horário de saída"),
+        message: getUserErrorMessage(error, "Erro ao atualizar horÃ¡rio de saÃ­da"),
       });
     } finally {
       setIsSubmitting(false);
@@ -377,8 +274,6 @@ export function useRelatorioPage() {
   };
 
   const handleSimulateClockStart = async () => {
-    const start = "23:58";
-
     if (!token || !relatorioId || isReadOnly) {
       return;
     }
@@ -387,24 +282,20 @@ export function useRelatorioPage() {
     setFeedback(null);
 
     try {
-      const snapshot = await setRelatorioClockSimulation(start, token);
-      setClockBusinessKey(snapshot.businessDateKey);
-      setClockSimulationStart(snapshot.simulationStart);
+      const snapshot = await startSimulation(defaultSimulationStart);
 
-      if (snapshot.showCountdown) {
-        const totalSeconds = Math.max(0, Math.ceil(snapshot.msToMidnight / 1000));
-        setCountdownMinutes(Math.floor(totalSeconds / 60));
-        setCountdownSeconds(totalSeconds % 60);
-      } else {
-        setCountdownMinutes(null);
-        setCountdownSeconds(null);
+      if (!snapshot) {
+        return;
       }
 
-      setFeedback({ type: "success", message: `Horário simulado ajustado para ${start}.` });
+      setFeedback({
+        type: "success",
+        message: `HorÃ¡rio simulado ajustado para ${defaultSimulationStart}.`,
+      });
     } catch (error) {
       setFeedback({
         type: "error",
-        message: getUserErrorMessage(error, "Não foi possível ajustar o horário de simulação."),
+        message: getUserErrorMessage(error, "NÃ£o foi possÃ­vel ajustar o horÃ¡rio de simulaÃ§Ã£o."),
       });
     } finally {
       setIsSubmitting(false);
