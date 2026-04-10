@@ -7,7 +7,8 @@ const getRelatorioAbertoMock = vi.fn();
 const createRelatorioItemMock = vi.fn();
 const updateRelatorioItemMock = vi.fn();
 const deleteRelatorioItemMock = vi.fn();
-const fecharRelatorioMock = vi.fn();
+const getRelatorioClockMock = vi.fn();
+const setRelatorioClockSimulationMock = vi.fn();
 
 vi.mock("../../src/services/authStorage", () => ({
   getAuthSession: () => getAuthSessionMock(),
@@ -18,7 +19,8 @@ vi.mock("../../src/services/relatorioService", () => ({
   createRelatorioItem: (...args: unknown[]) => createRelatorioItemMock(...args),
   updateRelatorioItem: (...args: unknown[]) => updateRelatorioItemMock(...args),
   deleteRelatorioItem: (...args: unknown[]) => deleteRelatorioItemMock(...args),
-  fecharRelatorio: (...args: unknown[]) => fecharRelatorioMock(...args),
+  getRelatorioClock: (...args: unknown[]) => getRelatorioClockMock(...args),
+  setRelatorioClockSimulation: (...args: unknown[]) => setRelatorioClockSimulationMock(...args),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -37,7 +39,7 @@ const authSession = {
   usuario: {
     id: 1,
     nome: "Operador Manhã",
-    email: "operador@ceslog.local",
+    usuario: "operador.manha",
     perfil: "OPERADOR",
     turno: "MANHA",
   },
@@ -74,10 +76,19 @@ describe("RelatorioPage", () => {
       criadoEm: "2026-04-06T08:00:00.000Z",
       usuario: authSession.usuario,
     });
+    getRelatorioClockMock.mockResolvedValue({
+      nowIso: "2026-04-06T08:00:00.000Z",
+      businessDateKey: "2026-04-06",
+      msToMidnight: 10_000,
+      minutesToMidnight: 0,
+      showCountdown: true,
+      simulationEnabled: false,
+      simulationStart: null,
+    });
 
     render(<RelatorioPage />);
 
-    await screen.findByText("Relatório do Dia");
+    await screen.findByText("Relatorio do Dia");
 
     fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "  CESLOG  " } });
     fireEvent.change(screen.getByLabelText("Placa do veículo"), { target: { value: "abc1d23" } });
@@ -85,7 +96,7 @@ describe("RelatorioPage", () => {
     fireEvent.change(screen.getByLabelText("Hora de entrada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Observações"), { target: { value: "Entrada principal" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar registro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar registro" }));
 
     await waitFor(() => {
       expect(createRelatorioItemMock).toHaveBeenCalledTimes(1);
@@ -114,10 +125,19 @@ describe("RelatorioPage", () => {
       finalizadoEm: "2026-04-06T23:59:00.000Z",
       itens: [],
     });
+    getRelatorioClockMock.mockResolvedValue({
+      nowIso: "2026-04-06T23:59:00.000Z",
+      businessDateKey: "2026-04-06",
+      msToMidnight: 0,
+      minutesToMidnight: 0,
+      showCountdown: false,
+      simulationEnabled: false,
+      simulationStart: null,
+    });
 
     render(<RelatorioPage />);
 
-    await screen.findByText("Relatório fechado: somente leitura.");
+    await screen.findByText("Relatorio fechado: somente leitura.");
 
     const lockedButtons = screen.getAllByRole("button", { name: "Relatório fechado" });
     expect(lockedButtons.length).toBeGreaterThanOrEqual(1);

@@ -39,7 +39,7 @@ describe("LoginPage", () => {
       usuario: {
         id: 1,
         nome: "Operador",
-        email: "operador@ceslog.local",
+        usuario: "operador.manha",
         perfil: "OPERADOR",
         turno: "MANHA",
       },
@@ -47,8 +47,8 @@ describe("LoginPage", () => {
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByLabelText("E-mail"), {
-      target: { value: "operador@ceslog.local" },
+    fireEvent.change(screen.getByLabelText("Usuario"), {
+      target: { value: "operador.manha" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "123456" },
@@ -57,7 +57,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     await waitFor(() => {
-      expect(loginMock).toHaveBeenCalledWith({ email: "operador@ceslog.local", senha: "123456" });
+      expect(loginMock).toHaveBeenCalledWith({ usuario: "operador.manha", senha: "123456" });
     });
 
     expect(saveAuthSessionMock).toHaveBeenCalledTimes(1);
