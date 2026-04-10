@@ -2,6 +2,7 @@ import type { FormEventHandler } from "react";
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import Input from "../../../components/Input";
+import SelectField from "../../../components/SelectField";
 import type { TurnoUsuario, UsuarioAdminListItem } from "../../../types/usuario";
 
 type NovoUsuarioFormValues = {
@@ -75,20 +76,15 @@ export default function AdminUsuariosSection({
             required
           />
 
-          <div className="flex w-full flex-col gap-1.5">
-            <label htmlFor="novo-turno" className="text-sm font-medium text-text-700">
-              Turno
-            </label>
-            <select
-              id="novo-turno"
-              value={novoUsuarioForm.turno}
-              onChange={(event) => onChangeTurno(event.target.value as TurnoUsuario)}
-              className="w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-            >
+          <SelectField
+            id="novo-turno"
+            label="Turno"
+            value={novoUsuarioForm.turno}
+            onChange={(event) => onChangeTurno(event.target.value as TurnoUsuario)}
+          >
               <option value="MANHA">MANHÃ</option>
               <option value="TARDE">TARDE</option>
-            </select>
-          </div>
+          </SelectField>
 
           <Button type="submit" className="w-full" disabled={isSubmittingUsuario || isLoadingUsuarios}>
             {isSubmittingUsuario ? "Salvando..." : "Criar usuário"}

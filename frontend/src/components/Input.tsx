@@ -1,4 +1,5 @@
-﻿import { forwardRef, useState, type InputHTMLAttributes } from "react";
+import { forwardRef, useState, type InputHTMLAttributes } from "react";
+import { formControlBaseClass } from "./formStyles";
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -43,7 +44,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           id={id}
           type={resolvedType}
-          className={`w-full rounded-md border border-surface-200 bg-white px-3 py-2.5 text-sm text-text-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 ${isPasswordField ? "pr-10" : ""} ${className}`.trim()}
+          className={`${formControlBaseClass} ${isPasswordField ? "pr-10" : ""} ${className}`.trim()}
           {...props}
         />
 
