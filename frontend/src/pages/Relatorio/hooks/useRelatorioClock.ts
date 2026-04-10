@@ -1,10 +1,7 @@
-﻿import type { Dispatch, SetStateAction } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getRelatorioClock,
-  setRelatorioClockSimulation,
-} from "../../../services/relatorioService";
+import { getRelatorioClock, setRelatorioClockSimulation } from "../../../services/relatorioService";
 import type { RelatorioClockSnapshot } from "../../../types/relatorio";
 import type { FeedbackState } from "../types";
 
@@ -48,42 +45,45 @@ export function useRelatorioClock({
   const clockBusinessKeyRef = useRef<string | null>(null);
   const autoRedirectTriggeredRef = useRef(false);
 
-  const applySnapshot = (snapshot: RelatorioClockSnapshot, options?: ApplySnapshotOptions) => {
-    setClockSimulationStart(snapshot.simulationEnabled ? snapshot.simulationStart : null);
+  const applySnapshot = useCallback(
+    (snapshot: RelatorioClockSnapshot, options?: ApplySnapshotOptions) => {
+      setClockSimulationStart(snapshot.simulationEnabled ? snapshot.simulationStart : null);
 
-    if (snapshot.showCountdown) {
-      const countdown = getCountdownFromMs(snapshot.msToMidnight);
-      setCountdownMinutes(countdown.minutes);
-      setCountdownSeconds(countdown.seconds);
-    } else {
-      setCountdownMinutes(null);
-      setCountdownSeconds(null);
-    }
+      if (snapshot.showCountdown) {
+        const countdown = getCountdownFromMs(snapshot.msToMidnight);
+        setCountdownMinutes(countdown.minutes);
+        setCountdownSeconds(countdown.seconds);
+      } else {
+        setCountdownMinutes(null);
+        setCountdownSeconds(null);
+      }
 
-    if (!clockBusinessKeyRef.current) {
-      clockBusinessKeyRef.current = snapshot.businessDateKey;
-      return;
-    }
+      if (!clockBusinessKeyRef.current) {
+        clockBusinessKeyRef.current = snapshot.businessDateKey;
+        return;
+      }
 
-    const viradaDetectada = snapshot.businessDateKey !== clockBusinessKeyRef.current;
-    if (!viradaDetectada || autoRedirectTriggeredRef.current || options?.allowRedirect === false) {
-      return;
-    }
+      const viradaDetectada = snapshot.businessDateKey !== clockBusinessKeyRef.current;
+      if (!viradaDetectada || autoRedirectTriggeredRef.current || options?.allowRedirect === false) {
+        return;
+      }
 
-    autoRedirectTriggeredRef.current = true;
-    setRelatorioStatus("FECHADO");
-    setFeedback({
-      type: "success",
-      message: "Relatório fechado automaticamente à meia-noite. Redirecionando...",
-    });
-
-    window.setTimeout(() => {
-      navigate("/dashboard", {
-        replace: true,
-        state: { message: "Relatório anterior fechado automaticamente à meia-noite." },
+      autoRedirectTriggeredRef.current = true;
+      setRelatorioStatus("FECHADO");
+      setFeedback({
+        type: "success",
+        message: "Relatório fechado automaticamente à meia-noite. Redirecionando...",
       });
-    }, 800);
-  };
+
+      window.setTimeout(() => {
+        navigate("/dashboard", {
+          replace: true,
+          state: { message: "Relatório anterior fechado automaticamente à meia-noite." },
+        });
+      }, 800);
+    },
+    [navigate, setFeedback, setRelatorioStatus],
+  );
 
   useEffect(() => {
     clockBusinessKeyRef.current = null;
@@ -121,7 +121,7 @@ export function useRelatorioClock({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [relatorioId, relatorioStatus, token]);
+  }, [applySnapshot, relatorioId, relatorioStatus, token]);
 
   const startSimulation = async (start: string = DEFAULT_SIMULATION_START) => {
     if (!token || !relatorioId || relatorioStatus === "FECHADO") {
