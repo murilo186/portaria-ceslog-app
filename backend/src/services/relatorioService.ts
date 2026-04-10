@@ -1,101 +1,44 @@
-﻿import { AppError } from "../middlewares/errorMiddleware";
-import { prisma } from "../lib/prisma";
-import { getBusinessDateKey } from "../utils/date";
-import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
+﻿import { Prisma } from "@prisma/client";
+import {
+  closeReportsByIds,
+  countClosedReports,
+  createOpenReportWithItems,
+  createRelatorioItemWithUsuario,
+  deleteRelatorioItemById,
+  findManagedItem,
+  findOpenReportWithItems,
+  findOpenReportsForCleanup,
+  findReportById,
+  findReportByIdWithItems,
+  listClosedReports,
+  listReportSummaries,
+  updateRelatorioAsClosed,
+  updateRelatorioItemWithUsuario,
+} from "../repositories/relatorioRepository";
+import { AppError } from "../middlewares/errorMiddleware";
 import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
-import { Prisma } from "@prisma/client";
-
-function reportInclude() {
-  return {
-    itens: {
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            nome: true,
-            usuario: true,
-            email: true,
-            perfil: true,
-            turno: true,
-          },
-        },
-      },
-      orderBy: {
-        id: "desc" as const,
-      },
-    },
-  };
-}
-
-function reportSummarySelect() {
-  return {
-    id: true,
-    dataRelatorio: true,
-    status: true,
-    criadoEm: true,
-    finalizadoEm: true,
-    _count: {
-      select: {
-        itens: true,
-      },
-    },
-  } satisfies Prisma.RelatorioSelect;
-}
+import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
+import { getBusinessDateKey } from "../utils/date";
 
 async function closeStaleOpenReports() {
   const todayKey = getCurrentBusinessDateKey();
-
-  const openReports = await prisma.relatorio.findMany({
-    where: { status: "ABERTO" },
-    select: {
-      id: true,
-      dataRelatorio: true,
-    },
-  });
+  const openReports = await findOpenReportsForCleanup();
 
   const staleIds = openReports
     .filter((report) => getBusinessDateKey(report.dataRelatorio) !== todayKey)
     .map((report) => report.id);
 
-  if (staleIds.length === 0) {
-    return;
-  }
-
-  await prisma.relatorio.updateMany({
-    where: {
-      id: {
-        in: staleIds,
-      },
-    },
-    data: {
-      status: "FECHADO",
-      finalizadoEm: getCurrentDate(),
-    },
-  });
+  await closeReportsByIds(staleIds, getCurrentDate());
 }
 
 async function findOpenReport() {
-  return prisma.relatorio.findFirst({
-    where: {
-      status: "ABERTO",
-    },
-    orderBy: {
-      criadoEm: "desc",
-    },
-    include: reportInclude(),
-  });
+  return findOpenReportWithItems();
 }
 
 async function createOpenReport() {
   try {
-    return await prisma.relatorio.create({
-      data: {
-        dataRelatorio: getCurrentDate(),
-        status: "ABERTO",
-      },
-      include: reportInclude(),
-    });
+    return await createOpenReportWithItems(getCurrentDate());
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new AppError("Já existe um relatório para o dia atual.", 409, "DAILY_REPORT_ALREADY_EXISTS");
@@ -145,10 +88,7 @@ export async function getTodayReportService() {
 }
 
 export async function listReportsService() {
-  return prisma.relatorio.findMany({
-    select: reportSummarySelect(),
-    orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
-  });
+  return listReportSummaries();
 }
 
 function getDateRange(data?: string): { gte: Date; lt: Date } | undefined {
@@ -212,15 +152,9 @@ export async function listClosedReportsService(query: ClosedReportsQuery) {
     };
   }
 
-  const [total, data] = await prisma.$transaction([
-    prisma.relatorio.count({ where }),
-    prisma.relatorio.findMany({
-      where,
-      select: reportSummarySelect(),
-      orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
+  const [total, data] = await Promise.all([
+    countClosedReports(where),
+    listClosedReports(where, page, pageSize),
   ]);
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
@@ -237,28 +171,7 @@ export async function listClosedReportsService(query: ClosedReportsQuery) {
 }
 
 export async function getReportByIdService(relatorioId: number) {
-  const relatorio = await prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-    include: {
-      itens: {
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              nome: true,
-              usuario: true,
-              email: true,
-              perfil: true,
-              turno: true,
-            },
-          },
-        },
-        orderBy: {
-          id: "desc",
-        },
-      },
-    },
-  });
+  const relatorio = await findReportByIdWithItems(relatorioId);
 
   if (!relatorio) {
     throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
@@ -281,9 +194,7 @@ export async function createRelatorioItemService(
   payload: RelatorioItemEditableInput,
   user: AuthenticatedUser,
 ) {
-  const relatorio = await prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-  });
+  const relatorio = await findReportById(relatorioId);
 
   if (!relatorio) {
     throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
@@ -293,51 +204,22 @@ export async function createRelatorioItemService(
     throw new AppError("Relatório fechado. Não é possível adicionar itens.", 409, "REPORT_CLOSED");
   }
 
-  return prisma.relatorioItem.create({
-    data: {
-      relatorioId: relatorio.id,
-      usuarioId: user.id,
-      perfilPessoa: payload.perfilPessoa,
-      empresa: payload.empresa.trim(),
-      placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-      nome: payload.nome.trim(),
-      horaEntrada: parseNullableString(payload.horaEntrada),
-      horaSaida: parseNullableString(payload.horaSaida),
-      observacoes: parseNullableString(payload.observacoes),
-      turno: user.turno,
-    },
-    include: {
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
+  return createRelatorioItemWithUsuario({
+    relatorioId: relatorio.id,
+    usuarioId: user.id,
+    perfilPessoa: payload.perfilPessoa,
+    empresa: payload.empresa.trim(),
+    placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
+    nome: payload.nome.trim(),
+    horaEntrada: parseNullableString(payload.horaEntrada),
+    horaSaida: parseNullableString(payload.horaSaida),
+    observacoes: parseNullableString(payload.observacoes),
+    turno: user.turno,
   });
 }
 
-async function getManagedItem(relatorioId: number, itemId: number) {
-  const item = await prisma.relatorioItem.findUnique({
-    where: { id: itemId },
-    include: {
-      relatorio: true,
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
-  });
+async function getManagedRelatorioItem(relatorioId: number, itemId: number) {
+  const item = await findManagedItem(itemId);
 
   if (!item || item.relatorioId !== relatorioId) {
     throw new AppError("Item do relatório não encontrado", 404, "ITEM_NOT_FOUND");
@@ -365,33 +247,18 @@ export async function updateRelatorioItemService(
   payload: RelatorioItemEditableInput,
   user: AuthenticatedUser,
 ) {
-  const item = await getManagedItem(relatorioId, itemId);
+  const item = await getManagedRelatorioItem(relatorioId, itemId);
 
   assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
-  return prisma.relatorioItem.update({
-    where: { id: item.id },
-    data: {
-      perfilPessoa: payload.perfilPessoa,
-      empresa: payload.empresa.trim(),
-      placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-      nome: payload.nome.trim(),
-      horaEntrada: parseNullableString(payload.horaEntrada),
-      horaSaida: parseNullableString(payload.horaSaida),
-      observacoes: parseNullableString(payload.observacoes),
-    },
-    include: {
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
+  return updateRelatorioItemWithUsuario(item.id, {
+    perfilPessoa: payload.perfilPessoa,
+    empresa: payload.empresa.trim(),
+    placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
+    nome: payload.nome.trim(),
+    horaEntrada: parseNullableString(payload.horaEntrada),
+    horaSaida: parseNullableString(payload.horaSaida),
+    observacoes: parseNullableString(payload.observacoes),
   });
 }
 
@@ -400,21 +267,17 @@ export async function deleteRelatorioItemService(
   itemId: number,
   user: AuthenticatedUser,
 ) {
-  const item = await getManagedItem(relatorioId, itemId);
+  const item = await getManagedRelatorioItem(relatorioId, itemId);
 
   assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
-  await prisma.relatorioItem.delete({
-    where: { id: item.id },
-  });
+  await deleteRelatorioItemById(item.id);
 
   return { ok: true };
 }
 
 export async function closeRelatorioService(relatorioId: number) {
-  const relatorio = await prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-  });
+  const relatorio = await findReportById(relatorioId);
 
   if (!relatorio) {
     throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
@@ -424,13 +287,7 @@ export async function closeRelatorioService(relatorioId: number) {
     return relatorio;
   }
 
-  return prisma.relatorio.update({
-    where: { id: relatorio.id },
-    data: {
-      status: "FECHADO",
-      finalizadoEm: getCurrentDate(),
-    },
-  });
+  return updateRelatorioAsClosed(relatorio.id, getCurrentDate());
 }
 
 export function getRelatorioClockService() {
@@ -440,4 +297,3 @@ export function getRelatorioClockService() {
 export function setRelatorioClockSimulationService(start: string | null) {
   return setClockSimulationStart(start);
 }
-
