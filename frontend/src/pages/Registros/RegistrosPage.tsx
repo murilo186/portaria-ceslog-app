@@ -1,5 +1,6 @@
 import Button from "../../components/Button";
 import Card from "../../components/Card";
+import FeedbackMessage from "../../components/FeedbackMessage";
 import Input from "../../components/Input";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, useRegistrosPage } from "./hooks/useRegistrosPage";
@@ -25,8 +26,8 @@ export default function RegistrosPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-text-900">Registros Fechados</h1>
-        <p className="text-sm text-text-700">Filtre por data, placa ou nome para localizar relatórios.</p>
-        {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+        <p className="text-sm text-text-700">Filtre por data, placa ou nome para localizar relatorios.</p>
+        {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
       </div>
 
       <Card className="space-y-4">
@@ -40,7 +41,7 @@ export default function RegistrosPage() {
               label="Busca por placa ou nome"
               value={searchFilter}
               onChange={(event) => setSearchFilter(event.target.value)}
-              placeholder="Ex.: ABC-1D23 ou João"
+              placeholder="Ex.: ABC-1D23 ou Joao"
             />
           </div>
         </div>
@@ -56,7 +57,7 @@ export default function RegistrosPage() {
 
         <p className="text-xs text-text-700">
           {appliedSearchFilter
-            ? `${meta.total} evidência(s) encontrada(s) para "${appliedSearchFilter}".`
+            ? `${meta.total} evidencias encontradas para "${appliedSearchFilter}".`
             : `${meta.total} registro(s) fechado(s) encontrado(s).`}
         </p>
       </Card>
@@ -88,7 +89,7 @@ export default function RegistrosPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-text-700">
-          Página {meta.page} de {meta.totalPages} • {meta.total} registro(s)
+          Pagina {meta.page} de {meta.totalPages} · {meta.total} registro(s)
         </p>
         <div className="flex gap-2">
           <Button
@@ -107,7 +108,7 @@ export default function RegistrosPage() {
             onClick={() => handleChangePage(Math.min(meta.totalPages, meta.page + 1))}
             disabled={isLoading || meta.page >= meta.totalPages}
           >
-            Próxima
+            Proxima
           </Button>
         </div>
       </div>

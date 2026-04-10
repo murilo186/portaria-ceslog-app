@@ -1,4 +1,5 @@
-﻿import Button from "../../../components/Button";
+import Button from "../../../components/Button";
+import FeedbackMessage from "../../../components/FeedbackMessage";
 import StatusBadge from "../../../components/StatusBadge";
 import type { FeedbackState } from "../types";
 
@@ -48,26 +49,22 @@ export default function RelatorioHeader({
         <StatusBadge status={relatorioStatus} />
       </div>
 
-      <h1 className="text-2xl font-semibold text-text-900">Relatório do Dia</h1>
+      <h1 className="text-2xl font-semibold text-text-900">Relatorio do Dia</h1>
       <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
       <p className="text-xs text-text-700">Turno aplicado automaticamente: {turnoAtual}</p>
-      {usuarioNome ? <p className="text-xs text-text-700">Autor automático: {usuarioNome}</p> : null}
-      <p className="text-xs text-text-700">Campos obrigatórios: empresa, placa, nome e perfil.</p>
+      {usuarioNome ? <p className="text-xs text-text-700">Autor automatico: {usuarioNome}</p> : null}
+      <p className="text-xs text-text-700">Campos obrigatorios: empresa, placa, nome e perfil.</p>
       {countdownMinutes !== null && countdownSeconds !== null ? (
         <p className="text-sm font-semibold text-amber-700">
-          Fechamento automático em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
+          Fechamento automatico em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
         </p>
       ) : null}
       {clockSimulationStart ? (
-        <p className="text-xs text-amber-700">Simulação de horário ativa no backend: início em {clockSimulationStart}.</p>
+        <p className="text-xs text-amber-700">Simulacao de horario ativa no backend: inicio em {clockSimulationStart}.</p>
       ) : null}
-      {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatório fechado: somente leitura.</p> : null}
+      {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatorio fechado: somente leitura.</p> : null}
 
-      {feedback ? (
-        <p className={`text-sm ${feedback.type === "error" ? "text-red-600" : "text-emerald-700"}`}>
-          {feedback.message}
-        </p>
-      ) : null}
+      {feedback ? <FeedbackMessage message={feedback.message} tone={feedback.type} /> : null}
     </div>
   );
 }

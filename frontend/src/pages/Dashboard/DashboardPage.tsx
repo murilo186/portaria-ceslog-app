@@ -1,5 +1,6 @@
-﻿import Button from "../../components/Button";
+import Button from "../../components/Button";
 import Card from "../../components/Card";
+import FeedbackMessage from "../../components/FeedbackMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, useDashboardPage } from "./hooks/useDashboardPage";
 
@@ -23,10 +24,12 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text-900">Painel do Operador</h1>
-          <p className="text-sm text-text-700">Controle rápido do relatório do turno.</p>
-          {locationState?.message ? <p className="mt-2 text-sm text-amber-700">{locationState.message}</p> : null}
-          {locationState?.authMessage ? <p className="mt-2 text-sm text-amber-700">{locationState.authMessage}</p> : null}
-          {errorMessage ? <p className="mt-2 text-sm text-red-600">{errorMessage}</p> : null}
+          <p className="text-sm text-text-700">Controle rapido do relatorio do turno.</p>
+          {locationState?.message ? <FeedbackMessage message={locationState.message} tone="warning" className="mt-2" /> : null}
+          {locationState?.authMessage ? (
+            <FeedbackMessage message={locationState.authMessage} tone="warning" className="mt-2" />
+          ) : null}
+          {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" className="mt-2" /> : null}
         </div>
       </div>
 
@@ -40,7 +43,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-text-900">Relatório do dia</h2>
+            <h2 className="text-lg font-semibold text-text-900">Relatorio do dia</h2>
 
             {isLoadingStatus ? (
               <p className="text-sm text-text-700">Carregando status...</p>
@@ -52,7 +55,7 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-text-700">Nenhum relatório em aberto.</p>
+              <p className="text-sm text-text-700">Nenhum relatorio em aberto.</p>
             )}
           </div>
 
@@ -62,7 +65,7 @@ export default function DashboardPage() {
               disabled={isLoadingAction || isLoadingStatus || hasOpenReport}
               className="w-full sm:w-auto"
             >
-              {isLoadingAction ? "Abrindo..." : "Novo relatório"}
+              {isLoadingAction ? "Abrindo..." : "Novo relatorio"}
             </Button>
             <Button
               variant="secondary"
@@ -70,20 +73,20 @@ export default function DashboardPage() {
               disabled={isLoadingAction || isLoadingStatus || !hasOpenReport}
               className="w-full sm:w-auto"
             >
-              Continuar relatório do dia
+              Continuar relatorio do dia
             </Button>
           </div>
           <p className="text-xs text-text-700">
             {hasOpenReport
-              ? "Relatório em andamento: use continuar para seguir com os registros."
-              : "Sem relatório aberto: crie um novo para iniciar os registros."}
+              ? "Relatorio em andamento: use continuar para seguir com os registros."
+              : "Sem relatorio aberto: crie um novo para iniciar os registros."}
           </p>
         </Card>
 
         <Card className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-text-900">Registros por data</h2>
-            <p className="mt-1 text-sm text-text-700">Lista os relatórios fechados e permite abrir o detalhe.</p>
+            <p className="mt-1 text-sm text-text-700">Lista os relatorios fechados e permite abrir o detalhe.</p>
           </div>
           <Button variant="secondary" onClick={handleGoRegistros}>
             Ver registros

@@ -5,7 +5,7 @@ import TextareaField from "../../../components/TextareaField";
 import type { RelatorioItemEditableFields } from "../../../types/relatorio";
 import { PERFIL_PESSOA_OPTIONS } from "../../../utils/perfilPessoa";
 import { formatPlacaInput } from "../../../utils/relatorioForm";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type FormEvent, type SetStateAction } from "react";
 
 type RelatorioEditModalProps = {
   isOpen: boolean;
@@ -26,20 +26,51 @@ export default function RelatorioEditModal({
   onClose,
   onSubmit,
 }: RelatorioEditModalProps) {
+  const firstFieldRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    window.setTimeout(() => {
+      firstFieldRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-      <div className="w-full max-w-2xl rounded-lg border border-surface-200 bg-white p-5 sm:p-6">
+      <div
+        className="w-full max-w-2xl rounded-lg border border-surface-200 bg-white p-5 sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-registro-title"
+      >
         <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold text-text-900">Editar registro</h2>
-          <p className="text-sm text-text-700">Atualize os dados e salve as alterações.</p>
+          <h2 id="edit-registro-title" className="text-lg font-semibold text-text-900">
+            Editar registro
+          </h2>
+          <p className="text-sm text-text-700">Atualize os dados e salve as alteracoes.</p>
         </div>
 
         <form className="grid grid-cols-2 gap-3 sm:gap-4" onSubmit={onSubmit}>
           <Input
+            ref={firstFieldRef}
             id="edit-empresa"
             label="Empresa"
             value={values.empresa ?? ""}
@@ -50,7 +81,7 @@ export default function RelatorioEditModal({
 
           <Input
             id="edit-placaVeiculo"
-            label="Placa do veículo"
+            label="Placa do veiculo"
             value={values.placaVeiculo ?? ""}
             onChange={(event) => setValues((prev) => ({ ...prev, placaVeiculo: formatPlacaInput(event.target.value) }))}
             required
@@ -97,7 +128,7 @@ export default function RelatorioEditModal({
           <Input
             id="edit-horaSaida"
             type="time"
-            label="Hora de saída"
+            label="Hora de saida"
             value={values.horaSaida ?? ""}
             onChange={(event) => setValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
             disabled={isReadOnly}
@@ -106,7 +137,7 @@ export default function RelatorioEditModal({
           <div className="col-span-2">
             <TextareaField
               id="edit-observacoes"
-              label="Observações"
+              label="Observacoes"
               value={values.observacoes ?? ""}
               onChange={(event) => setValues((prev) => ({ ...prev, observacoes: event.target.value }))}
               rows={3}
@@ -125,7 +156,7 @@ export default function RelatorioEditModal({
               Cancelar
             </Button>
             <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isReadOnly}>
-              Salvar alterações
+              Salvar alteracoes
             </Button>
           </div>
         </form>

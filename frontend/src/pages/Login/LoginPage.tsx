@@ -1,10 +1,11 @@
-﻿import { getAuthSession, saveAuthSession } from "../../services/authStorage";
+import { getAuthSession, saveAuthSession } from "../../services/authStorage";
 import { getUserErrorMessage } from "../../services/errorService";
 import { login } from "../../services/authService";
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
+import FeedbackMessage from "../../components/FeedbackMessage";
 import Input from "../../components/Input";
 
 type LoginLocationState = {
@@ -42,7 +43,7 @@ export default function LoginPage() {
       const target = response.usuario.perfil === "ADMIN" ? "/admin" : "/dashboard";
       navigate(target, { replace: true });
     } catch (error) {
-      const message = getUserErrorMessage(error, "Não foi possível fazer login");
+      const message = getUserErrorMessage(error, "Nao foi possivel fazer login");
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -85,8 +86,8 @@ export default function LoginPage() {
               required
             />
 
-            {locationState?.authMessage ? <p className="text-sm text-amber-700">{locationState.authMessage}</p> : null}
-            {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+            {locationState?.authMessage ? <FeedbackMessage message={locationState.authMessage} tone="warning" /> : null}
+            {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
 
             <Button type="submit" className="mt-2 w-full" disabled={isSubmitting}>
               {isSubmitting ? "Entrando..." : "Entrar"}
@@ -97,4 +98,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
