@@ -1,6 +1,6 @@
 import Card from "../../../components/Card";
 import type { RelatorioResumo } from "../../../types/relatorio";
-import { formatDate } from "../hooks/useAdminPage";
+import { formatDate } from "../helpers/adminFormatters";
 
 type AdminClosedReportsCardProps = {
   isLoadingRegistros: boolean;

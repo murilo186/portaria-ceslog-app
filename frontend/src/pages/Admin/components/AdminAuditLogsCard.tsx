@@ -1,7 +1,12 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import type { AuditLogItem } from "../../../types/usuario";
-import { formatActionLabel, formatAuditDetails, formatDateTime, formatUserAgent } from "../hooks/useAdminPage";
+import {
+  formatActionLabel,
+  formatAuditDetails,
+  formatDateTime,
+  formatUserAgent,
+} from "../helpers/adminFormatters";
 
 type AdminAuditLogsCardProps = {
   isLoadingLogs: boolean;
