@@ -15,11 +15,56 @@ import {
   updateRelatorioAsClosed,
   updateRelatorioItemWithUsuario,
 } from "../repositories/relatorioRepository";
+import { clearCacheByPrefix, getCachedValue, setCachedValue } from "../lib/memoryCache";
 import { AppError } from "../middlewares/errorMiddleware";
 import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
 import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
 import { getBusinessDateKey } from "../utils/date";
+
+const CLOSED_REPORTS_CACHE_PREFIX = "relatorios:fechados:";
+const REPORT_DETAIL_CACHE_PREFIX = "relatorio:detalhe:";
+const CLOSED_REPORTS_CACHE_TTL_MS = 20_000;
+const REPORT_DETAIL_CACHE_TTL_MS = 20_000;
+
+type ClosedReportsResponse = {
+  data: Awaited<ReturnType<typeof listClosedReports>>;
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+function buildClosedReportsCacheKey(query: ClosedReportsQuery) {
+  const data = query.data?.trim() ?? "";
+  const busca = query.busca?.trim().toLowerCase() ?? "";
+  return `${CLOSED_REPORTS_CACHE_PREFIX}${query.page}:${query.pageSize}:${data}:${busca}`;
+}
+
+function buildReportDetailCacheKey(relatorioId: number) {
+  return `${REPORT_DETAIL_CACHE_PREFIX}${relatorioId}`;
+}
+
+function invalidateClosedReportsCache() {
+  clearCacheByPrefix(CLOSED_REPORTS_CACHE_PREFIX);
+}
+
+function invalidateReportDetailCache(relatorioId: number) {
+  clearCacheByPrefix(buildReportDetailCacheKey(relatorioId));
+}
+
+function invalidateRelatorioReadCaches(relatorioId?: number) {
+  invalidateClosedReportsCache();
+
+  if (typeof relatorioId === "number") {
+    invalidateReportDetailCache(relatorioId);
+    return;
+  }
+
+  clearCacheByPrefix(REPORT_DETAIL_CACHE_PREFIX);
+}
 
 async function closeStaleOpenReports() {
   const todayKey = getCurrentBusinessDateKey();
@@ -29,7 +74,12 @@ async function closeStaleOpenReports() {
     .filter((report) => getBusinessDateKey(report.dataRelatorio) !== todayKey)
     .map((report) => report.id);
 
+  if (staleIds.length === 0) {
+    return;
+  }
+
   await closeReportsByIds(staleIds, getCurrentDate());
+  invalidateRelatorioReadCaches();
 }
 
 async function findOpenReport() {
@@ -62,7 +112,10 @@ export async function createNewReportService() {
     throw new AppError("Já existe um relatório em aberto.", 409, "OPEN_REPORT_EXISTS");
   }
 
-  return createOpenReport();
+  const created = await createOpenReport();
+  invalidateRelatorioReadCaches(created.id);
+
+  return created;
 }
 
 export async function getTodayReportService() {
@@ -73,7 +126,9 @@ export async function getTodayReportService() {
   }
 
   try {
-    return await createOpenReport();
+    const created = await createOpenReport();
+    invalidateRelatorioReadCaches(created.id);
+    return created;
   } catch (error) {
     if (error instanceof AppError && error.code === "DAILY_REPORT_ALREADY_EXISTS") {
       const currentOpenReport = await findOpenReport();
@@ -118,6 +173,13 @@ function getDateRange(data?: string): { gte: Date; lt: Date } | undefined {
 }
 
 export async function listClosedReportsService(query: ClosedReportsQuery) {
+  const cacheKey = buildClosedReportsCacheKey(query);
+  const cached = getCachedValue<ClosedReportsResponse>(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
   const page = Math.max(1, query.page);
   const pageSize = Math.min(50, Math.max(1, query.pageSize));
   const normalizedSearch = query.busca?.trim();
@@ -159,7 +221,7 @@ export async function listClosedReportsService(query: ClosedReportsQuery) {
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
 
-  return {
+  const payload: ClosedReportsResponse = {
     data,
     meta: {
       page,
@@ -168,14 +230,27 @@ export async function listClosedReportsService(query: ClosedReportsQuery) {
       totalPages,
     },
   };
+
+  setCachedValue(cacheKey, payload, CLOSED_REPORTS_CACHE_TTL_MS);
+
+  return payload;
 }
 
 export async function getReportByIdService(relatorioId: number) {
+  const cacheKey = buildReportDetailCacheKey(relatorioId);
+  const cached = getCachedValue<Awaited<ReturnType<typeof findReportByIdWithItems>>>(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
   const relatorio = await findReportByIdWithItems(relatorioId);
 
   if (!relatorio) {
     throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
   }
+
+  setCachedValue(cacheKey, relatorio, REPORT_DETAIL_CACHE_TTL_MS);
 
   return relatorio;
 }
@@ -204,7 +279,7 @@ export async function createRelatorioItemService(
     throw new AppError("Relatório fechado. Não é possível adicionar itens.", 409, "REPORT_CLOSED");
   }
 
-  return createRelatorioItemWithUsuario({
+  const created = await createRelatorioItemWithUsuario({
     relatorioId: relatorio.id,
     usuarioId: user.id,
     perfilPessoa: payload.perfilPessoa,
@@ -216,6 +291,10 @@ export async function createRelatorioItemService(
     observacoes: parseNullableString(payload.observacoes),
     turno: user.turno,
   });
+
+  invalidateRelatorioReadCaches(relatorio.id);
+
+  return created;
 }
 
 async function getManagedRelatorioItem(relatorioId: number, itemId: number) {
@@ -251,7 +330,7 @@ export async function updateRelatorioItemService(
 
   assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
-  return updateRelatorioItemWithUsuario(item.id, {
+  const updated = await updateRelatorioItemWithUsuario(item.id, {
     perfilPessoa: payload.perfilPessoa,
     empresa: payload.empresa.trim(),
     placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
@@ -260,6 +339,10 @@ export async function updateRelatorioItemService(
     horaSaida: parseNullableString(payload.horaSaida),
     observacoes: parseNullableString(payload.observacoes),
   });
+
+  invalidateRelatorioReadCaches(item.relatorioId);
+
+  return updated;
 }
 
 export async function deleteRelatorioItemService(
@@ -272,6 +355,7 @@ export async function deleteRelatorioItemService(
   assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
   await deleteRelatorioItemById(item.id);
+  invalidateRelatorioReadCaches(item.relatorioId);
 
   return { ok: true };
 }
@@ -287,7 +371,10 @@ export async function closeRelatorioService(relatorioId: number) {
     return relatorio;
   }
 
-  return updateRelatorioAsClosed(relatorio.id, getCurrentDate());
+  const closed = await updateRelatorioAsClosed(relatorio.id, getCurrentDate());
+  invalidateRelatorioReadCaches(relatorio.id);
+
+  return closed;
 }
 
 export function getRelatorioClockService() {
