@@ -1,206 +1,253 @@
-import { prisma } from "../lib/prisma";
-import type { Prisma } from "@prisma/client";
+﻿import { prisma } from "../lib/prisma";
+import type { Prisma, StatusRelatorio } from "@prisma/client";
 
-export function reportInclude() {
-  return {
-    itens: {
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            nome: true,
-            usuario: true,
-            email: true,
-            perfil: true,
-            turno: true,
-          },
+const usuarioResumoSelect = {
+  id: true,
+  nome: true,
+  usuario: true,
+  email: true,
+  perfil: true,
+  turno: true,
+} as const;
+
+const relatorioItensInclude = {
+  include: {
+    usuario: {
+      select: usuarioResumoSelect,
+    },
+  },
+  orderBy: {
+    id: "desc" as const,
+  },
+} as const;
+
+const relatorioWithItensInclude = {
+  itens: relatorioItensInclude,
+} as const;
+
+const relatorioSummarySelect = {
+  id: true,
+  dataRelatorio: true,
+  status: true,
+  criadoEm: true,
+  finalizadoEm: true,
+  _count: {
+    select: {
+      itens: true,
+    },
+  },
+} as const;
+
+const managedItemInclude = {
+  relatorio: true,
+  usuario: {
+    select: usuarioResumoSelect,
+  },
+} as const;
+
+export type UsuarioResumo = Prisma.UsuarioGetPayload<{
+  select: typeof usuarioResumoSelect;
+}>;
+
+export type RelatorioComItens = Prisma.RelatorioGetPayload<{
+  include: typeof relatorioWithItensInclude;
+}>;
+
+export type RelatorioResumo = Prisma.RelatorioGetPayload<{
+  select: typeof relatorioSummarySelect;
+}>;
+
+export type RelatorioItemGerenciado = Prisma.RelatorioItemGetPayload<{
+  include: typeof managedItemInclude;
+}>;
+
+export type RelatorioStatusMinimo = {
+  id: number;
+  status: StatusRelatorio;
+};
+
+export type RelatorioCleanupCandidate = {
+  id: number;
+  dataRelatorio: Date;
+};
+
+export interface IRelatorioRepository {
+  findOpenReportsForCleanup(): Promise<RelatorioCleanupCandidate[]>;
+  closeReportsByIds(reportIds: number[], finalizadoEm: Date): Promise<void>;
+  findOpenReportWithItems(): Promise<RelatorioComItens | null>;
+  createOpenReportWithItems(dataRelatorio: Date): Promise<RelatorioComItens>;
+  listReportSummaries(): Promise<RelatorioResumo[]>;
+  countClosedReports(where: Prisma.RelatorioWhereInput): Promise<number>;
+  listClosedReports(where: Prisma.RelatorioWhereInput, page: number, pageSize: number): Promise<RelatorioResumo[]>;
+  findReportByIdWithItems(relatorioId: number): Promise<RelatorioComItens | null>;
+  findReportById(relatorioId: number): Promise<Prisma.RelatorioGetPayload<object> | null>;
+  findReportStatusById(relatorioId: number): Promise<RelatorioStatusMinimo | null>;
+  createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput): Promise<Prisma.RelatorioItemGetPayload<object>>;
+  findManagedItem(itemId: number): Promise<RelatorioItemGerenciado | null>;
+  updateRelatorioItem(itemId: number, data: Prisma.RelatorioItemUncheckedUpdateInput): Promise<Prisma.RelatorioItemGetPayload<object>>;
+  deleteRelatorioItemById(itemId: number): Promise<void>;
+  updateRelatorioAsClosed(relatorioId: number, finalizadoEm: Date): Promise<Prisma.RelatorioGetPayload<object>>;
+}
+
+export const relatorioRepository: IRelatorioRepository = {
+  async findOpenReportsForCleanup() {
+    return prisma.relatorio.findMany({
+      where: { status: "ABERTO" },
+      select: {
+        id: true,
+        dataRelatorio: true,
+      },
+    });
+  },
+
+  async closeReportsByIds(reportIds: number[], finalizadoEm: Date) {
+    if (reportIds.length === 0) {
+      return;
+    }
+
+    await prisma.relatorio.updateMany({
+      where: {
+        id: {
+          in: reportIds,
         },
+      },
+      data: {
+        status: "FECHADO",
+        finalizadoEm,
+      },
+    });
+  },
+
+  async findOpenReportWithItems() {
+    return prisma.relatorio.findFirst({
+      where: {
+        status: "ABERTO",
       },
       orderBy: {
-        id: "desc" as const,
+        criadoEm: "desc",
       },
-    },
-  };
-}
+      include: relatorioWithItensInclude,
+    });
+  },
 
-export function reportSummarySelect() {
-  return {
-    id: true,
-    dataRelatorio: true,
-    status: true,
-    criadoEm: true,
-    finalizadoEm: true,
-    _count: {
+  async createOpenReportWithItems(dataRelatorio: Date) {
+    return prisma.relatorio.create({
+      data: {
+        dataRelatorio,
+        status: "ABERTO",
+      },
+      include: relatorioWithItensInclude,
+    });
+  },
+
+  async listReportSummaries() {
+    return prisma.relatorio.findMany({
+      select: relatorioSummarySelect,
+      orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
+    });
+  },
+
+  async countClosedReports(where: Prisma.RelatorioWhereInput) {
+    return prisma.relatorio.count({ where });
+  },
+
+  async listClosedReports(where: Prisma.RelatorioWhereInput, page: number, pageSize: number) {
+    return prisma.relatorio.findMany({
+      where,
+      select: relatorioSummarySelect,
+      orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+  },
+
+  async findReportByIdWithItems(relatorioId: number) {
+    return prisma.relatorio.findUnique({
+      where: { id: relatorioId },
+      include: relatorioWithItensInclude,
+    });
+  },
+
+  async findReportById(relatorioId: number) {
+    return prisma.relatorio.findUnique({
+      where: { id: relatorioId },
+    });
+  },
+
+  async findReportStatusById(relatorioId: number) {
+    return prisma.relatorio.findUnique({
+      where: { id: relatorioId },
       select: {
-        itens: true,
+        id: true,
+        status: true,
       },
-    },
-  } satisfies Prisma.RelatorioSelect;
-}
+    });
+  },
 
-export async function findOpenReportsForCleanup() {
-  return prisma.relatorio.findMany({
-    where: { status: "ABERTO" },
-    select: {
-      id: true,
-      dataRelatorio: true,
-    },
-  });
-}
+  async createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput) {
+    return prisma.relatorioItem.create({
+      data,
+    });
+  },
 
-export async function closeReportsByIds(reportIds: number[], finalizadoEm: Date) {
-  if (reportIds.length === 0) {
-    return;
-  }
+  async findManagedItem(itemId: number) {
+    return prisma.relatorioItem.findUnique({
+      where: { id: itemId },
+      include: managedItemInclude,
+    });
+  },
 
-  await prisma.relatorio.updateMany({
-    where: {
-      id: {
-        in: reportIds,
+  async updateRelatorioItem(itemId: number, data: Prisma.RelatorioItemUncheckedUpdateInput) {
+    return prisma.relatorioItem.update({
+      where: { id: itemId },
+      data,
+    });
+  },
+
+  async deleteRelatorioItemById(itemId: number) {
+    await prisma.relatorioItem.delete({
+      where: { id: itemId },
+    });
+  },
+
+  async updateRelatorioAsClosed(relatorioId: number, finalizadoEm: Date) {
+    return prisma.relatorio.update({
+      where: { id: relatorioId },
+      data: {
+        status: "FECHADO",
+        finalizadoEm,
       },
-    },
-    data: {
-      status: "FECHADO",
-      finalizadoEm,
-    },
-  });
-}
+    });
+  },
+};
 
-export async function findOpenReportWithItems() {
-  return prisma.relatorio.findFirst({
-    where: {
-      status: "ABERTO",
-    },
-    orderBy: {
-      criadoEm: "desc",
-    },
-    include: reportInclude(),
-  });
-}
-
-export async function createOpenReportWithItems(dataRelatorio: Date) {
-  return prisma.relatorio.create({
-    data: {
-      dataRelatorio,
-      status: "ABERTO",
-    },
-    include: reportInclude(),
-  });
-}
-
-export async function listReportSummaries() {
-  return prisma.relatorio.findMany({
-    select: reportSummarySelect(),
-    orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
-  });
-}
-
-export async function countClosedReports(where: Prisma.RelatorioWhereInput) {
-  return prisma.relatorio.count({ where });
-}
-
-export async function listClosedReports(
-  where: Prisma.RelatorioWhereInput,
-  page: number,
-  pageSize: number,
-) {
-  return prisma.relatorio.findMany({
-    where,
-    select: reportSummarySelect(),
-    orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
-}
-
-export async function findReportByIdWithItems(relatorioId: number) {
-  return prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-    include: {
-      itens: {
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              nome: true,
-              usuario: true,
-              email: true,
-              perfil: true,
-              turno: true,
-            },
-          },
-        },
-        orderBy: {
-          id: "desc",
-        },
-      },
-    },
-  });
-}
-
-export async function findReportById(relatorioId: number) {
-  return prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-  });
-}
-
-export async function findReportStatusById(relatorioId: number) {
-  return prisma.relatorio.findUnique({
-    where: { id: relatorioId },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
-}
-
-export async function createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput) {
-  return prisma.relatorioItem.create({
-    data,
-  });
-}
-
-export async function findManagedItem(itemId: number) {
-  return prisma.relatorioItem.findUnique({
-    where: { id: itemId },
-    include: {
-      relatorio: true,
-      usuario: {
-        select: {
-          id: true,
-          nome: true,
-          usuario: true,
-          email: true,
-          perfil: true,
-          turno: true,
-        },
-      },
-    },
-  });
-}
-
-export async function updateRelatorioItem(
-  itemId: number,
-  data: Prisma.RelatorioItemUncheckedUpdateInput,
-) {
-  return prisma.relatorioItem.update({
-    where: { id: itemId },
-    data,
-  });
-}
-
-export async function deleteRelatorioItemById(itemId: number) {
-  await prisma.relatorioItem.delete({
-    where: { id: itemId },
-  });
-}
-
-export async function updateRelatorioAsClosed(relatorioId: number, finalizadoEm: Date) {
-  return prisma.relatorio.update({
-    where: { id: relatorioId },
-    data: {
-      status: "FECHADO",
-      finalizadoEm,
-    },
-  });
-}
+export const findOpenReportsForCleanup = (...args: Parameters<IRelatorioRepository["findOpenReportsForCleanup"]>) =>
+  relatorioRepository.findOpenReportsForCleanup(...args);
+export const closeReportsByIds = (...args: Parameters<IRelatorioRepository["closeReportsByIds"]>) =>
+  relatorioRepository.closeReportsByIds(...args);
+export const findOpenReportWithItems = (...args: Parameters<IRelatorioRepository["findOpenReportWithItems"]>) =>
+  relatorioRepository.findOpenReportWithItems(...args);
+export const createOpenReportWithItems = (...args: Parameters<IRelatorioRepository["createOpenReportWithItems"]>) =>
+  relatorioRepository.createOpenReportWithItems(...args);
+export const listReportSummaries = (...args: Parameters<IRelatorioRepository["listReportSummaries"]>) =>
+  relatorioRepository.listReportSummaries(...args);
+export const countClosedReports = (...args: Parameters<IRelatorioRepository["countClosedReports"]>) =>
+  relatorioRepository.countClosedReports(...args);
+export const listClosedReports = (...args: Parameters<IRelatorioRepository["listClosedReports"]>) =>
+  relatorioRepository.listClosedReports(...args);
+export const findReportByIdWithItems = (...args: Parameters<IRelatorioRepository["findReportByIdWithItems"]>) =>
+  relatorioRepository.findReportByIdWithItems(...args);
+export const findReportById = (...args: Parameters<IRelatorioRepository["findReportById"]>) =>
+  relatorioRepository.findReportById(...args);
+export const findReportStatusById = (...args: Parameters<IRelatorioRepository["findReportStatusById"]>) =>
+  relatorioRepository.findReportStatusById(...args);
+export const createRelatorioItem = (...args: Parameters<IRelatorioRepository["createRelatorioItem"]>) =>
+  relatorioRepository.createRelatorioItem(...args);
+export const findManagedItem = (...args: Parameters<IRelatorioRepository["findManagedItem"]>) =>
+  relatorioRepository.findManagedItem(...args);
+export const updateRelatorioItem = (...args: Parameters<IRelatorioRepository["updateRelatorioItem"]>) =>
+  relatorioRepository.updateRelatorioItem(...args);
+export const deleteRelatorioItemById = (...args: Parameters<IRelatorioRepository["deleteRelatorioItemById"]>) =>
+  relatorioRepository.deleteRelatorioItemById(...args);
+export const updateRelatorioAsClosed = (...args: Parameters<IRelatorioRepository["updateRelatorioAsClosed"]>) =>
+  relatorioRepository.updateRelatorioAsClosed(...args);
