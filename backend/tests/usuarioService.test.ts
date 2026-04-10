@@ -81,6 +81,31 @@ describe("usuarioService", () => {
     expect(result.usuario).toBe("operador.1");
   });
 
+  it("sanitiza nome ao criar usuario", async () => {
+    findFirstMock.mockResolvedValue(null);
+    hashMock.mockResolvedValue("hash.mock");
+    createMock.mockResolvedValue({
+      id: 12,
+      nome: "Operador Script",
+      usuario: "operador.script",
+      email: "operador.script@usuario.local",
+      perfil: "OPERADOR",
+      turno: "MANHA",
+      ativo: true,
+      criadoEm: new Date("2026-04-06T12:00:00.000Z"),
+    });
+
+    await createUsuarioService({
+      nome: " <script>alert(1)</script>Operador Script ",
+      usuario: "operador.script",
+      senha: "123456",
+      turno: "MANHA",
+    });
+
+    const [callArg] = createMock.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(callArg.data.nome).toBe("alert(1) Operador Script");
+  });
+
   it("bloqueia auto exclusao", async () => {
     findUniqueMock.mockResolvedValue({
       id: 7,

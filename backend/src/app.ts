@@ -11,7 +11,28 @@ import { randomUUID } from "node:crypto";
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: {
+      policy: "no-referrer",
+    },
+  }),
+);
+
 app.use(
   cors({
     origin: true,
