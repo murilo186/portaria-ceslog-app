@@ -1,7 +1,7 @@
+﻿import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAuthSession } from "../../../services/authStorage";
 import type { TurnoUsuario } from "../../../types/usuario";
-import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type { Feedback } from "./adminPage.types";
 import { useAdminData } from "./useAdminData";
 import { useAdminUserActions } from "./useAdminUserActions";
@@ -30,9 +30,8 @@ export function useAdminPage() {
     isLoadingLogs,
     latestClosedReports,
     usuarios,
-    setUsuarios,
     auditLogs,
-    loadLogs,
+    refetchLogs,
   } = useAdminData({
     auth,
     navigateToLogin,
@@ -46,7 +45,7 @@ export function useAdminPage() {
       return;
     }
 
-    await loadLogs(auth.token, auth.usuario.id);
+    await refetchLogs();
   };
 
   const { isSubmittingUsuario, novoUsuarioForm, setNovoUsuarioForm, handleCreateUsuario, handleDeleteUsuario } =
@@ -54,8 +53,6 @@ export function useAdminPage() {
       auth,
       navigateToLogin,
       setFeedback,
-      setUsuarios,
-      refreshLogs: handleRefreshLogs,
     });
 
   const handleGoRegistros = () => {
@@ -66,21 +63,33 @@ export function useAdminPage() {
     navigate(`/registros/${reportId}`);
   };
 
-  const handleChangeNovoUsuarioNome = useCallback((value: string) => {
-    setNovoUsuarioForm((prev) => ({ ...prev, nome: value }));
-  }, [setNovoUsuarioForm]);
+  const handleChangeNovoUsuarioNome = useCallback(
+    (value: string) => {
+      setNovoUsuarioForm((prev) => ({ ...prev, nome: value }));
+    },
+    [setNovoUsuarioForm],
+  );
 
-  const handleChangeNovoUsuarioLogin = useCallback((value: string) => {
-    setNovoUsuarioForm((prev) => ({ ...prev, usuario: value }));
-  }, [setNovoUsuarioForm]);
+  const handleChangeNovoUsuarioLogin = useCallback(
+    (value: string) => {
+      setNovoUsuarioForm((prev) => ({ ...prev, usuario: value }));
+    },
+    [setNovoUsuarioForm],
+  );
 
-  const handleChangeNovoUsuarioSenha = useCallback((value: string) => {
-    setNovoUsuarioForm((prev) => ({ ...prev, senha: value }));
-  }, [setNovoUsuarioForm]);
+  const handleChangeNovoUsuarioSenha = useCallback(
+    (value: string) => {
+      setNovoUsuarioForm((prev) => ({ ...prev, senha: value }));
+    },
+    [setNovoUsuarioForm],
+  );
 
-  const handleChangeNovoUsuarioTurno = useCallback((turno: TurnoUsuario) => {
-    setNovoUsuarioForm((prev) => ({ ...prev, turno }));
-  }, [setNovoUsuarioForm]);
+  const handleChangeNovoUsuarioTurno = useCallback(
+    (turno: TurnoUsuario) => {
+      setNovoUsuarioForm((prev) => ({ ...prev, turno }));
+    },
+    [setNovoUsuarioForm],
+  );
 
   return {
     auth,

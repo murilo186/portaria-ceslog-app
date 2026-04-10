@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PaginationMeta } from "../../../types/relatorio";
 import { initialMeta, parseInitialFilters } from "./registrosPageHelpers";
@@ -12,24 +12,31 @@ export function useRegistrosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { initialPage } = parseInitialFilters(searchParams);
 
-  const [meta, setMeta] = useState<PaginationMeta>({
-    ...initialMeta,
-    page: initialPage,
-  });
+  const [page, setPage] = useState(initialPage);
+  const [pageSize] = useState(initialMeta.pageSize);
 
   const filtros = useRegistrosFilters({
-    meta,
-    setMeta: (updater) => setMeta((prev) => updater(prev)),
+    page,
+    setPage,
     searchParams,
     setSearchParams: (next) => setSearchParams(next, { replace: true }),
   });
 
-  const { registrosFechados, isLoading, errorMessage } = useRegistrosData({
+  const { registrosFechados, meta: remoteMeta, isLoading, errorMessage } = useRegistrosData({
     appliedDateFilter: filtros.appliedDateFilter,
     appliedSearchFilter: filtros.appliedSearchFilter,
-    meta,
-    setMeta,
+    page,
+    pageSize,
   });
+
+  const meta = useMemo<PaginationMeta>(() => {
+    return {
+      page: remoteMeta.page,
+      pageSize: remoteMeta.pageSize,
+      total: remoteMeta.total,
+      totalPages: remoteMeta.totalPages,
+    };
+  }, [remoteMeta.page, remoteMeta.pageSize, remoteMeta.total, remoteMeta.totalPages]);
 
   const handleOpenDetail = (relatorioId: number) => {
     navigate(filtros.buildDetailPath(relatorioId));

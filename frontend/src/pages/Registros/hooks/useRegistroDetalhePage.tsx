@@ -1,90 +1,68 @@
-import { getAuthSession } from "../../../services/authStorage";
-import { getUserErrorMessage } from "../../../services/errorService";
-import { getCachedValue, setCachedValue } from "../../../services/requestCache";
-import { getRelatorioById } from "../../../services/relatorioService";
+﻿import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { getAuthSession } from "../../../services/authStorage";
+import { getUserErrorMessage } from "../../../services/errorService";
+import { queryKeys } from "../../../services/queryKeys";
+import { getRelatorioById } from "../../../services/relatorioService";
+import type { AuthState } from "../../../types/auth";
 import type { Relatorio } from "../../../types/relatorio";
 import type { Usuario } from "../../../types/usuario";
 import { buildRegistroCsv, getAutor, getSearchStats, renderHighlightedText } from "./registroDetalheHelpers";
 
 export { formatDate } from "./registroDetalheHelpers";
 
-const REGISTRO_DETALHE_CACHE_TTL_MS = 20_000;
-
-function getRegistroDetalheCacheKey(relatorioId: number) {
-  return `registros:detalhe:${relatorioId}`;
-}
-
 export function useRegistroDetalhePage() {
   const navigate = useNavigate();
   const { relatorioId } = useParams<{ relatorioId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const auth = getAuthSession() as AuthState | null;
 
-  const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
-  const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const initialDateFilter = useMemo(() => searchParams.get("data") ?? "", [searchParams]);
+  const initialSearchFilter = useMemo(() => searchParams.get("busca") ?? "", [searchParams]);
 
-  const [dateFilter, setDateFilter] = useState(searchParams.get("data") ?? "");
-  const [searchFilter, setSearchFilter] = useState(searchParams.get("busca") ?? "");
-  const [appliedSearchFilter, setAppliedSearchFilter] = useState((searchParams.get("busca") ?? "").trim());
+  const [dateFilter, setDateFilter] = useState(initialDateFilter);
+  const [searchFilter, setSearchFilter] = useState(initialSearchFilter);
+  const [appliedSearchFilter, setAppliedSearchFilter] = useState(initialSearchFilter.trim());
+
+  const usuarioLogado: Usuario | null = auth?.usuario ?? null;
+
+  const parsedRelatorioId = useMemo(() => {
+    const parsed = Number(relatorioId);
+
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    return parsed;
+  }, [relatorioId]);
 
   useEffect(() => {
-    const nextDateFilter = searchParams.get("data") ?? "";
-    const nextSearchFilter = searchParams.get("busca") ?? "";
-
-    setDateFilter(nextDateFilter);
-    setSearchFilter(nextSearchFilter);
-    setAppliedSearchFilter(nextSearchFilter.trim());
-  }, [searchParams]);
-
-  useEffect(() => {
-    const auth = getAuthSession();
-
     if (!auth || !relatorioId) {
       navigate("/");
-      return;
+    }
+  }, [auth, navigate, relatorioId]);
+
+  const relatorioQuery = useQuery<Relatorio>({
+    queryKey: queryKeys.reportDetail(parsedRelatorioId ?? 0),
+    enabled: Boolean(auth && parsedRelatorioId),
+    queryFn: () => getRelatorioById(parsedRelatorioId as number, auth!.token),
+    staleTime: 20_000,
+  });
+
+  const errorMessage = useMemo(() => {
+    if (relatorioId && parsedRelatorioId === null) {
+      return "Identificador de relatorio invalido.";
     }
 
-    const authSession = auth;
-
-    setUsuarioLogado(authSession.usuario);
-
-    async function loadDetail() {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const parsedId = Number(relatorioId);
-
-        if (!Number.isFinite(parsedId)) {
-          setErrorMessage("Identificador de relatorio invalido.");
-          return;
-        }
-
-        const cacheKey = getRegistroDetalheCacheKey(parsedId);
-        const cached = getCachedValue<Relatorio>(cacheKey);
-
-        if (cached) {
-          setRelatorio(cached);
-          setIsLoading(false);
-          return;
-        }
-
-        const detail = await getRelatorioById(parsedId, authSession.token);
-        setRelatorio(detail);
-        setCachedValue(cacheKey, detail, REGISTRO_DETALHE_CACHE_TTL_MS);
-      } catch (error) {
-        setErrorMessage(getUserErrorMessage(error, "Erro ao carregar registro"));
-      } finally {
-        setIsLoading(false);
-      }
+    if (!relatorioQuery.error) {
+      return null;
     }
 
-    void loadDetail();
-  }, [navigate, relatorioId]);
+    return getUserErrorMessage(relatorioQuery.error, "Erro ao carregar registro");
+  }, [parsedRelatorioId, relatorioId, relatorioQuery.error]);
 
+  const relatorio = relatorioQuery.data ?? null;
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
 
   const searchStats = useMemo(() => {
@@ -105,10 +83,14 @@ export function useRegistroDetalhePage() {
 
     params.set("page", "1");
 
+    setAppliedSearchFilter(normalizedSearch);
     setSearchParams(params, { replace: true });
   }, [dateFilter, searchFilter, setSearchParams]);
 
   const handleClearFilters = useCallback(() => {
+    setDateFilter("");
+    setSearchFilter("");
+    setAppliedSearchFilter("");
     setSearchParams({}, { replace: true });
   }, [setSearchParams]);
 
@@ -137,7 +119,7 @@ export function useRegistroDetalhePage() {
 
   return {
     relatorio,
-    isLoading,
+    isLoading: relatorioQuery.isLoading,
     errorMessage,
     isAdmin,
     searchStats,

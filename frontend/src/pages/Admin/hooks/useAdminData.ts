@@ -1,18 +1,13 @@
-import { getUserErrorMessage } from "../../../services/errorService";
-import { getCachedValue, setCachedValue } from "../../../services/requestCache";
+﻿import { useQuery } from "@tanstack/react-query";
+import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { listRelatoriosFechados } from "../../../services/relatorioService";
+import { getUserErrorMessage } from "../../../services/errorService";
+import { queryKeys } from "../../../services/queryKeys";
 import { listAuditLogs, listUsuarios } from "../../../services/usuarioService";
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { AuthState } from "../../../types/auth";
 import type { RelatorioResumo } from "../../../types/relatorio";
 import type { AuditLogItem, UsuarioAdminListItem } from "../../../types/usuario";
 import type { Feedback } from "./adminPage.types";
-import {
-  ADMIN_CACHE_TTL_MS,
-  getAdminClosedReportsCacheKey,
-  getAdminLogsCacheKey,
-  getAdminUsersCacheKey,
-} from "./adminCache";
 
 type UseAdminDataParams = {
   auth: AuthState | null;
@@ -21,104 +16,14 @@ type UseAdminDataParams = {
   setFeedback: Dispatch<SetStateAction<Feedback | null>>;
 };
 
+const AUDIT_LOG_LIMIT = 20;
+const ADMIN_CLOSED_REPORTS_PAGE_SIZE = 5;
+
 export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFeedback }: UseAdminDataParams) {
-  const [isLoadingRegistros, setIsLoadingRegistros] = useState(true);
-  const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(true);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
-  const [latestClosedReports, setLatestClosedReports] = useState<RelatorioResumo[]>([]);
-  const [usuarios, setUsuarios] = useState<UsuarioAdminListItem[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-
-  const loadLogs = useCallback(
-    async (token: string, usuarioId: number) => {
-      setIsLoadingLogs(true);
-
-      const cacheKey = getAdminLogsCacheKey(usuarioId);
-      const cached = getCachedValue<AuditLogItem[]>(cacheKey);
-
-      if (cached) {
-        setAuditLogs(cached);
-        setIsLoadingLogs(false);
-        return;
-      }
-
-      try {
-        const data = await listAuditLogs(token, 20);
-        setAuditLogs(data);
-        setCachedValue(cacheKey, data, ADMIN_CACHE_TTL_MS);
-      } catch (error) {
-        setFeedback({
-          type: "error",
-          message: getUserErrorMessage(error, "Nao foi possivel carregar os logs de auditoria."),
-        });
-      } finally {
-        setIsLoadingLogs(false);
-      }
-    },
-    [setFeedback],
-  );
-
-  const loadRegistros = useCallback(
-    async (token: string, usuarioId: number) => {
-      setIsLoadingRegistros(true);
-
-      const cacheKey = getAdminClosedReportsCacheKey(usuarioId);
-      const cached = getCachedValue<RelatorioResumo[]>(cacheKey);
-
-      if (cached) {
-        setLatestClosedReports(cached);
-        setIsLoadingRegistros(false);
-        return;
-      }
-
-      try {
-        const closedResponse = await listRelatoriosFechados(token, {
-          page: 1,
-          pageSize: 5,
-        });
-
-        setLatestClosedReports(closedResponse.data);
-        setCachedValue(cacheKey, closedResponse.data, ADMIN_CACHE_TTL_MS);
-      } catch (error) {
-        setFeedback({
-          type: "error",
-          message: getUserErrorMessage(error, "Nao foi possivel carregar os registros."),
-        });
-      } finally {
-        setIsLoadingRegistros(false);
-      }
-    },
-    [setFeedback],
-  );
-
-  const loadUsuarios = useCallback(
-    async (token: string, usuarioId: number) => {
-      setIsLoadingUsuarios(true);
-
-      const cacheKey = getAdminUsersCacheKey(usuarioId);
-      const cached = getCachedValue<UsuarioAdminListItem[]>(cacheKey);
-
-      if (cached) {
-        setUsuarios(cached);
-        setIsLoadingUsuarios(false);
-        return;
-      }
-
-      try {
-        const data = await listUsuarios(token);
-        setUsuarios(data);
-        setCachedValue(cacheKey, data, ADMIN_CACHE_TTL_MS);
-      } catch (error) {
-        setFeedback({
-          type: "error",
-          message: getUserErrorMessage(error, "Nao foi possivel carregar os usuarios."),
-        });
-      } finally {
-        setIsLoadingUsuarios(false);
-      }
-    },
-    [setFeedback],
-  );
+  const usuarioId = auth?.usuario.id ?? null;
+  const token = auth?.token ?? null;
+  const isAdmin = auth?.usuario.perfil === "ADMIN";
+  const isEnabled = Boolean(token && usuarioId && isAdmin);
 
   useEffect(() => {
     if (!auth) {
@@ -126,26 +31,79 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
       return;
     }
 
-    if (auth.usuario.perfil !== "ADMIN") {
+    if (!isAdmin) {
       navigateToDashboard();
+    }
+  }, [auth, isAdmin, navigateToDashboard, navigateToLogin]);
+
+  const closedReportsQuery = useQuery<RelatorioResumo[]>({
+    queryKey: queryKeys.adminClosedReports(usuarioId ?? 0, ADMIN_CLOSED_REPORTS_PAGE_SIZE),
+    enabled: isEnabled,
+    queryFn: async () => {
+      const response = await listRelatoriosFechados(token!, {
+        page: 1,
+        pageSize: ADMIN_CLOSED_REPORTS_PAGE_SIZE,
+      });
+
+      return response.data;
+    },
+    staleTime: 30_000,
+  });
+
+  const usersQuery = useQuery<UsuarioAdminListItem[]>({
+    queryKey: queryKeys.adminUsers(usuarioId ?? 0),
+    enabled: isEnabled,
+    queryFn: () => listUsuarios(token!),
+    staleTime: 30_000,
+  });
+
+  const logsQuery = useQuery<AuditLogItem[]>({
+    queryKey: queryKeys.adminLogs(usuarioId ?? 0, AUDIT_LOG_LIMIT),
+    enabled: isEnabled,
+    queryFn: () => listAuditLogs(token!, AUDIT_LOG_LIMIT),
+    staleTime: 15_000,
+  });
+
+  useEffect(() => {
+    if (!closedReportsQuery.error) {
       return;
     }
 
-    const usuarioId = auth.usuario.id;
+    setFeedback({
+      type: "error",
+      message: getUserErrorMessage(closedReportsQuery.error, "Nao foi possivel carregar os registros."),
+    });
+  }, [closedReportsQuery.error, setFeedback]);
 
-    void loadRegistros(auth.token, usuarioId);
-    void loadUsuarios(auth.token, usuarioId);
-    void loadLogs(auth.token, usuarioId);
-  }, [auth, loadLogs, loadRegistros, loadUsuarios, navigateToDashboard, navigateToLogin]);
+  useEffect(() => {
+    if (!usersQuery.error) {
+      return;
+    }
+
+    setFeedback({
+      type: "error",
+      message: getUserErrorMessage(usersQuery.error, "Nao foi possivel carregar os usuarios."),
+    });
+  }, [setFeedback, usersQuery.error]);
+
+  useEffect(() => {
+    if (!logsQuery.error) {
+      return;
+    }
+
+    setFeedback({
+      type: "error",
+      message: getUserErrorMessage(logsQuery.error, "Nao foi possivel carregar os logs de auditoria."),
+    });
+  }, [logsQuery.error, setFeedback]);
 
   return {
-    isLoadingRegistros,
-    isLoadingUsuarios,
-    isLoadingLogs,
-    latestClosedReports,
-    usuarios,
-    setUsuarios,
-    auditLogs,
-    loadLogs,
+    isLoadingRegistros: closedReportsQuery.isLoading,
+    isLoadingUsuarios: usersQuery.isLoading,
+    isLoadingLogs: logsQuery.isLoading,
+    latestClosedReports: closedReportsQuery.data ?? [],
+    usuarios: usersQuery.data ?? [],
+    auditLogs: logsQuery.data ?? [],
+    refetchLogs: logsQuery.refetch,
   };
 }

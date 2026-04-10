@@ -1,15 +1,14 @@
-import { useState } from "react";
-import type { PaginationMeta } from "../../../types/relatorio";
+﻿import { useState } from "react";
 import { parseInitialFilters } from "./registrosPageHelpers";
 
 type UseRegistrosFiltersParams = {
-  meta: PaginationMeta;
-  setMeta: (updater: (prevMeta: PaginationMeta) => PaginationMeta) => void;
+  page: number;
+  setPage: (nextPage: number) => void;
   searchParams: URLSearchParams;
   setSearchParams: (nextInit: URLSearchParams) => void;
 };
 
-export function useRegistrosFilters({ meta, setMeta, searchParams, setSearchParams }: UseRegistrosFiltersParams) {
+export function useRegistrosFilters({ page, setPage, searchParams, setSearchParams }: UseRegistrosFiltersParams) {
   const { initialDateFilter, initialSearchFilter } = parseInitialFilters(searchParams);
 
   const [dateFilter, setDateFilter] = useState(initialDateFilter);
@@ -38,7 +37,7 @@ export function useRegistrosFilters({ meta, setMeta, searchParams, setSearchPara
   const handleApplyFilters = () => {
     const normalizedSearch = searchFilter.trim();
 
-    setMeta((prevMeta) => ({ ...prevMeta, page: 1 }));
+    setPage(1);
     setAppliedDateFilter(dateFilter);
     setAppliedSearchFilter(normalizedSearch);
     updateSearchParams({
@@ -53,15 +52,12 @@ export function useRegistrosFilters({ meta, setMeta, searchParams, setSearchPara
     setSearchFilter("");
     setAppliedDateFilter("");
     setAppliedSearchFilter("");
-    setMeta((prevMeta) => ({ ...prevMeta, page: 1 }));
+    setPage(1);
     updateSearchParams({ page: 1 });
   };
 
   const handleChangePage = (nextPage: number) => {
-    setMeta((prevMeta) => ({
-      ...prevMeta,
-      page: nextPage,
-    }));
+    setPage(nextPage);
 
     updateSearchParams({
       data: appliedDateFilter || undefined,
@@ -81,8 +77,8 @@ export function useRegistrosFilters({ meta, setMeta, searchParams, setSearchPara
       params.set("busca", appliedSearchFilter);
     }
 
-    if (meta.page > 1) {
-      params.set("page", String(meta.page));
+    if (page > 1) {
+      params.set("page", String(page));
     }
 
     const queryString = params.toString();

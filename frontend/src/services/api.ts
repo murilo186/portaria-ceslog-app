@@ -1,5 +1,7 @@
 ﻿import { emitAuthRequired } from "./authEvents";
 
+import type { ZodType } from "zod";
+
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 type ApiErrorCode =
@@ -12,6 +14,7 @@ type ApiErrorCode =
   | "VALIDATION_ERROR"
   | "INVALID_CREDENTIALS"
   | "INTERNAL_ERROR"
+  | "INVALID_RESPONSE"
   | string;
 
 export class ApiError extends Error {
@@ -83,6 +86,22 @@ export async function apiRequest<T>(path: string, config: RequestConfig = {}): P
     throw new ApiError(message, response.status, code);
   }
 
-  return (await response.json()) as T;
+  const responseBody: unknown = await response.json();
+  return responseBody as T;
+}
+
+export async function apiRequestWithSchema<T>(
+  path: string,
+  schema: ZodType<T>,
+  config: RequestConfig = {},
+): Promise<T> {
+  const responseBody = await apiRequest<unknown>(path, config);
+  const parsed = schema.safeParse(responseBody);
+
+  if (!parsed.success) {
+    throw new ApiError("Resposta invalida do servidor.", 500, "INVALID_RESPONSE");
+  }
+
+  return parsed.data;
 }
 

@@ -1,78 +1,59 @@
+﻿import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAuthSession } from "../../../services/authStorage";
 import { getUserErrorMessage } from "../../../services/errorService";
-import { getCachedValue, setCachedValue } from "../../../services/requestCache";
+import { queryKeys } from "../../../services/queryKeys";
 import { listRelatoriosFechados } from "../../../services/relatorioService";
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { useNavigate } from "react-router-dom";
-import type { PaginatedResponse, PaginationMeta, RelatorioResumo } from "../../../types/relatorio";
+import type { AuthState } from "../../../types/auth";
+import type { PaginationMeta, RelatorioResumo } from "../../../types/relatorio";
 
 type UseRegistrosDataParams = {
   appliedDateFilter: string;
   appliedSearchFilter: string;
-  meta: PaginationMeta;
-  setMeta: Dispatch<SetStateAction<PaginationMeta>>;
+  page: number;
+  pageSize: number;
 };
 
-const REGISTROS_CACHE_TTL_MS = 20_000;
+const EMPTY_META: PaginationMeta = {
+  page: 1,
+  pageSize: 8,
+  total: 0,
+  totalPages: 1,
+};
 
-function getRegistrosCacheKey(appliedDateFilter: string, appliedSearchFilter: string, page: number, pageSize: number) {
-  return `registros:fechados:${page}:${pageSize}:${appliedDateFilter}:${appliedSearchFilter}`;
-}
-
-export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, meta, setMeta }: UseRegistrosDataParams) {
+export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, page, pageSize }: UseRegistrosDataParams) {
   const navigate = useNavigate();
-  const [registrosFechados, setRegistrosFechados] = useState<RelatorioResumo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const auth = getAuthSession() as AuthState | null;
 
   useEffect(() => {
-    const auth = getAuthSession();
-
     if (!auth) {
       navigate("/");
-      return;
     }
+  }, [auth, navigate]);
 
-    const authSession = auth;
-    const cacheKey = getRegistrosCacheKey(appliedDateFilter, appliedSearchFilter, meta.page, meta.pageSize);
-    const cached = getCachedValue<PaginatedResponse<RelatorioResumo>>(cacheKey);
-
-    if (cached) {
-      setRegistrosFechados(cached.data);
-      setMeta(cached.meta);
-      setIsLoading(false);
-      setErrorMessage(null);
-      return;
-    }
-
-    async function loadRegistros() {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const response = await listRelatoriosFechados(authSession.token, {
-          page: meta.page,
-          pageSize: meta.pageSize,
-          data: appliedDateFilter || undefined,
-          busca: appliedSearchFilter || undefined,
-        });
-
-        setRegistrosFechados(response.data);
-        setMeta(response.meta);
-        setCachedValue(cacheKey, response, REGISTROS_CACHE_TTL_MS);
-      } catch (error) {
-        setErrorMessage(getUserErrorMessage(error, "Erro ao carregar registros"));
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void loadRegistros();
-  }, [appliedDateFilter, appliedSearchFilter, meta.page, meta.pageSize, navigate, setMeta]);
+  const query = useQuery({
+    queryKey: queryKeys.closedReports({
+      page,
+      pageSize,
+      data: appliedDateFilter,
+      busca: appliedSearchFilter,
+    }),
+    enabled: Boolean(auth),
+    queryFn: () =>
+      listRelatoriosFechados(auth!.token, {
+        page,
+        pageSize,
+        data: appliedDateFilter || undefined,
+        busca: appliedSearchFilter || undefined,
+      }),
+    staleTime: 20_000,
+  });
 
   return {
-    registrosFechados,
-    isLoading,
-    errorMessage,
+    registrosFechados: (query.data?.data ?? []) as RelatorioResumo[],
+    meta: query.data?.meta ?? { ...EMPTY_META, page, pageSize },
+    isLoading: query.isLoading,
+    errorMessage: query.error ? getUserErrorMessage(query.error, "Erro ao carregar registros") : null,
   };
 }

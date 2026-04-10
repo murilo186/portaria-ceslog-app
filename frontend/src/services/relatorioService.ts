@@ -1,4 +1,13 @@
-﻿import { apiRequest } from "./api";
+﻿import { z } from "zod";
+import { apiRequestWithSchema } from "./api";
+import {
+  okResponseSchema,
+  paginatedRelatorioResumoResponseSchema,
+  relatorioClockSnapshotSchema,
+  relatorioItemSchema,
+  relatorioResumoSchema,
+  relatorioSchema,
+} from "./contracts";
 import type {
   ClosedReportsFilters,
   PaginatedResponse,
@@ -9,23 +18,25 @@ import type {
   RelatorioResumo,
 } from "../types/relatorio";
 
+const relatorioResumoListSchema = z.array(relatorioResumoSchema);
+
 export async function getRelatorioHoje(token: string): Promise<Relatorio> {
-  return apiRequest<Relatorio>("/api/relatorios/hoje", { token });
+  return apiRequestWithSchema("/api/relatorios/hoje", relatorioSchema, { token });
 }
 
 export async function getRelatorioAberto(token: string): Promise<Relatorio> {
-  return apiRequest<Relatorio>("/api/relatorios/aberto", { token });
+  return apiRequestWithSchema("/api/relatorios/aberto", relatorioSchema, { token });
 }
 
 export async function getRelatorioClock(token: string): Promise<RelatorioClockSnapshot> {
-  return apiRequest<RelatorioClockSnapshot>(`/api/relatorios/relogio?t=${Date.now()}`, { token });
+  return apiRequestWithSchema(`/api/relatorios/relogio?t=${Date.now()}`, relatorioClockSnapshotSchema, { token });
 }
 
 export async function setRelatorioClockSimulation(
   start: string | null,
   token: string,
 ): Promise<RelatorioClockSnapshot> {
-  return apiRequest<RelatorioClockSnapshot>("/api/relatorios/relogio/simulacao", {
+  return apiRequestWithSchema("/api/relatorios/relogio/simulacao", relatorioClockSnapshotSchema, {
     method: "POST",
     body: { start },
     token,
@@ -33,14 +44,14 @@ export async function setRelatorioClockSimulation(
 }
 
 export async function createNovoRelatorio(token: string): Promise<Relatorio> {
-  return apiRequest<Relatorio>("/api/relatorios/novo", {
+  return apiRequestWithSchema("/api/relatorios/novo", relatorioSchema, {
     method: "POST",
     token,
   });
 }
 
 export async function listRelatorios(token: string): Promise<RelatorioResumo[]> {
-  return apiRequest<RelatorioResumo[]>("/api/relatorios", { token });
+  return apiRequestWithSchema("/api/relatorios", relatorioResumoListSchema, { token });
 }
 
 export async function listRelatoriosFechados(
@@ -67,14 +78,13 @@ export async function listRelatoriosFechados(
 
   const queryString = query.toString();
 
-  return apiRequest<PaginatedResponse<RelatorioResumo>>(
-    `/api/relatorios/fechados${queryString ? `?${queryString}` : ""}`,
-    { token },
-  );
+  return apiRequestWithSchema(`/api/relatorios/fechados${queryString ? `?${queryString}` : ""}`, paginatedRelatorioResumoResponseSchema, {
+    token,
+  });
 }
 
 export async function getRelatorioById(relatorioId: number, token: string): Promise<Relatorio> {
-  return apiRequest<Relatorio>(`/api/relatorios/${relatorioId}`, { token });
+  return apiRequestWithSchema(`/api/relatorios/${relatorioId}`, relatorioSchema, { token });
 }
 
 export async function createRelatorioItem(
@@ -82,7 +92,7 @@ export async function createRelatorioItem(
   payload: RelatorioItemEditableFields,
   token: string,
 ): Promise<RelatorioItem> {
-  return apiRequest<RelatorioItem>(`/api/relatorios/${relatorioId}/itens`, {
+  return apiRequestWithSchema(`/api/relatorios/${relatorioId}/itens`, relatorioItemSchema, {
     method: "POST",
     body: payload,
     token,
@@ -95,7 +105,7 @@ export async function updateRelatorioItem(
   payload: RelatorioItemEditableFields,
   token: string,
 ): Promise<RelatorioItem> {
-  return apiRequest<RelatorioItem>(`/api/relatorios/${relatorioId}/itens/${itemId}`, {
+  return apiRequestWithSchema(`/api/relatorios/${relatorioId}/itens/${itemId}`, relatorioItemSchema, {
     method: "PUT",
     body: payload,
     token,
@@ -103,16 +113,15 @@ export async function updateRelatorioItem(
 }
 
 export async function deleteRelatorioItem(relatorioId: number, itemId: number, token: string): Promise<void> {
-  await apiRequest<{ ok: true }>(`/api/relatorios/${relatorioId}/itens/${itemId}`, {
+  await apiRequestWithSchema(`/api/relatorios/${relatorioId}/itens/${itemId}`, okResponseSchema, {
     method: "DELETE",
     token,
   });
 }
 
 export async function fecharRelatorio(relatorioId: number, token: string): Promise<Relatorio> {
-  return apiRequest<Relatorio>(`/api/relatorios/${relatorioId}/fechar`, {
+  return apiRequestWithSchema(`/api/relatorios/${relatorioId}/fechar`, relatorioSchema, {
     method: "POST",
     token,
   });
 }
-
