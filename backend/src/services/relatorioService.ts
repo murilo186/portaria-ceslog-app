@@ -28,6 +28,21 @@ function reportInclude() {
   };
 }
 
+function reportSummarySelect() {
+  return {
+    id: true,
+    dataRelatorio: true,
+    status: true,
+    criadoEm: true,
+    finalizadoEm: true,
+    _count: {
+      select: {
+        itens: true,
+      },
+    },
+  } satisfies Prisma.RelatorioSelect;
+}
+
 async function closeStaleOpenReports() {
   const todayKey = getCurrentBusinessDateKey();
 
@@ -111,16 +126,8 @@ export async function getTodayReportService() {
 
 export async function listReportsService() {
   return prisma.relatorio.findMany({
-    include: {
-      _count: {
-        select: {
-          itens: true,
-        },
-      },
-    },
-    orderBy: {
-      dataRelatorio: "desc",
-    },
+    select: reportSummarySelect(),
+    orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
   });
 }
 
@@ -189,16 +196,8 @@ export async function listClosedReportsService(query: ClosedReportsQuery) {
     prisma.relatorio.count({ where }),
     prisma.relatorio.findMany({
       where,
-      include: {
-        _count: {
-          select: {
-            itens: true,
-          },
-        },
-      },
-      orderBy: {
-        dataRelatorio: "desc",
-      },
+      select: reportSummarySelect(),
+      orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

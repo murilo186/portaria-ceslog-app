@@ -57,6 +57,7 @@ model Relatorio {
 
   itens           RelatorioItem[]
 
+  @@index([status, dataRelatorio])
   @@map("relatorios")
 }
 
@@ -79,6 +80,10 @@ model RelatorioItem {
 
   @@index([relatorioId])
   @@index([usuarioId])
+  @@index([relatorioId, criadoEm])
+  @@index([usuarioId, criadoEm])
+  @@index([placaVeiculo])
+  @@index([nome])
   @@map("relatorio_itens")
 }
 
