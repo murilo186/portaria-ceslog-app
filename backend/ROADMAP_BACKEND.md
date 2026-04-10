@@ -33,6 +33,27 @@ Melhorar performance, reduzir latencia de consultas, reforcar regras de negocio 
 - Criterio de aceite:
   - Paginacao sem degradacao perceptivel em pagina alta.
 
+### Task 1.4 - Otimizar endpoint de registros fechados (latencia percebida)
+- Objetivo: reduzir tempo de carregamento da tela de registros.
+- Acoes:
+  - Revisar query de `/api/relatorios/fechados` para buscar somente campos necessarios.
+  - Aplicar filtro de data/busca de forma index-friendly (evitar varredura total).
+  - Retornar `_count` de itens sem carregar lista completa de itens.
+  - Padronizar ordenacao por `dataRelatorio DESC, id DESC`.
+- Criterio de aceite:
+  - Reducao do tempo medio/p95 na rota de registros fechados.
+  - Sem regressao de filtros (data, placa, nome) e paginacao.
+
+### Task 1.5 - Diagnosticar e eliminar N+1 nas rotas de relatorio
+- Objetivo: remover consultas repetitivas e roundtrips desnecessarios.
+- Acoes:
+  - Auditar Prisma logs para detectar padrao N+1 nas rotas de listagem e detalhe.
+  - Consolidar consultas com `include/select` controlado quando necessario.
+  - Evitar chamadas duplicadas de contagem/lista no mesmo request.
+- Criterio de aceite:
+  - Menor numero de queries por request nas rotas criticas.
+  - Ganho mensuravel de latencia em ambiente de homolog.
+
 ## Fase 2 - Regras de negocio blindadas
 
 ### Task 2.1 - Garantir regra "1 relatorio por dia" no banco + service
@@ -146,13 +167,36 @@ Melhorar performance, reduzir latencia de consultas, reforcar regras de negocio 
 - Criterio de aceite:
   - Politica de bloqueio e validacao aplicada em todos os endpoints sensiveis.
 
+### Task 6.3 - Prevencao de SQL Injection
+- Objetivo: impedir injecao em consultas ao banco.
+- Acoes:
+  - Proibir `prisma.$queryRawUnsafe` e SQL montado por concatenacao.
+  - Quando SQL raw for inevitavel, usar apenas query parametrizada (`$queryRaw` com bind).
+  - Validar e normalizar inputs com Zod antes de montar filtros.
+  - Revisar permissoes do banco (principio do menor privilegio).
+- Criterio de aceite:
+  - Nenhuma rota sensivel usando query insegura.
+  - Checklist de seguranca de query aprovado em code review.
+
+### Task 6.4 - Prevencao de XSS (stored e reflected)
+- Objetivo: bloquear injeccao de script em dados de usuario.
+- Acoes:
+  - Sanitizar campos textuais livres (ex.: observacoes) no backend antes de persistir.
+  - Aplicar limite de tamanho e whitelist de caracteres onde fizer sentido.
+  - Reforcar headers de seguranca via Helmet (CSP, X-Content-Type-Options, etc.).
+  - Adicionar testes de payload malicioso nos endpoints de escrita.
+- Criterio de aceite:
+  - Payloads com script nao sao persistidos/servidos de forma executavel.
+  - Testes de seguranca passando no CI.
+
 ## Ordem recomendada de execucao
 1. Fase 1 (indices + queries + paginacao)
 2. Fase 2 (regras criticas)
-3. Fase 6.1 (testes de integracao)
-4. Fase 3 (refatoracao estrutural)
-5. Fase 4 (observabilidade)
-6. Fase 5 (cache e tuning de conexao)
+3. Fase 6.2 + 6.3 + 6.4 (hardening de seguranca)
+4. Fase 6.1 (testes de integracao)
+5. Fase 3 (refatoracao estrutural)
+6. Fase 4 (observabilidade)
+7. Fase 5 (cache e tuning de conexao)
 
 ## Definicao de pronto (DoD)
 - Migration aplicada e validada em homolog.
