@@ -16,10 +16,12 @@ export async function healthController(req: Request, res: Response) {
 
     return res.status(503).json({
       ok: false,
+      app: "up",
       database: "down",
+      dbLatencyMs: null,
+      uptimeSeconds: Number(process.uptime().toFixed(2)),
       timestamp: new Date().toISOString(),
-      message: "Falha na conexão com o banco de dados",
+      message: "Falha na conexao com o banco de dados",
     });
   }
 }
-

@@ -1,5 +1,6 @@
 ﻿import { env } from "./config/env";
 import { errorMiddleware } from "./middlewares/errorMiddleware";
+import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware";
 import healthRoutes from "./routes/healthRoutes";
 import routes from "./routes";
 import cookieParser from "cookie-parser";
@@ -25,6 +26,7 @@ app.use((req, res, next) => {
   res.setHeader("x-request-id", req.requestId);
   next();
 });
+app.use(requestLoggingMiddleware);
 
 app.use("/", healthRoutes);
 app.use("/api", routes);
@@ -37,4 +39,3 @@ export function startServer() {
 }
 
 export default app;
-
