@@ -4,7 +4,7 @@ import { getBusinessDateKey } from "../utils/date";
 import { getCurrentBusinessDateKey, getCurrentDate, getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
 import type { AuthenticatedUser } from "../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../types/relatorio";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 function reportInclude() {
   return {
@@ -88,13 +88,21 @@ async function findOpenReport() {
 }
 
 async function createOpenReport() {
-  return prisma.relatorio.create({
-    data: {
-      dataRelatorio: getCurrentDate(),
-      status: "ABERTO",
-    },
-    include: reportInclude(),
-  });
+  try {
+    return await prisma.relatorio.create({
+      data: {
+        dataRelatorio: getCurrentDate(),
+        status: "ABERTO",
+      },
+      include: reportInclude(),
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new AppError("Já existe um relatório para o dia atual.", 409, "DAILY_REPORT_ALREADY_EXISTS");
+    }
+
+    throw error;
+  }
 }
 
 export async function getOpenReportService() {
@@ -121,7 +129,19 @@ export async function getTodayReportService() {
     return report;
   }
 
-  return createOpenReport();
+  try {
+    return await createOpenReport();
+  } catch (error) {
+    if (error instanceof AppError && error.code === "DAILY_REPORT_ALREADY_EXISTS") {
+      const currentOpenReport = await findOpenReport();
+
+      if (currentOpenReport) {
+        return currentOpenReport;
+      }
+    }
+
+    throw error;
+  }
 }
 
 export async function listReportsService() {
