@@ -23,6 +23,7 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
     const page = Math.max(1, query.page);
     const pageSize = Math.min(50, Math.max(1, query.pageSize));
     const normalizedSearch = query.busca?.trim();
+    const canApplyTextSearch = Boolean(normalizedSearch && normalizedSearch.length >= 2);
     const dateRange = runtime.policies.getDateRange(query.data);
 
     const where: Prisma.RelatorioWhereInput = {
@@ -33,7 +34,7 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
       where.dataRelatorio = dateRange;
     }
 
-    if (normalizedSearch) {
+    if (canApplyTextSearch && normalizedSearch) {
       where.itens = {
         some: {
           OR: [
