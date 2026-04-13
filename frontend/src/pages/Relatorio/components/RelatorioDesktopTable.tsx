@@ -1,5 +1,7 @@
-﻿import Card from "../../../components/Card";
+import Button from "../../../components/Button";
+import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import type { RelatorioItem } from "../../../types/relatorio";
 
 type RelatorioDesktopTableProps = {
@@ -25,6 +27,12 @@ export default function RelatorioDesktopTable({
   getAutorLabel,
   perfilPessoaLabel,
 }: RelatorioDesktopTableProps) {
+  const { visibleCount, visibleItems, hasMore, showMore } = useIncrementalRender({
+    items,
+    initialCount: 40,
+    step: 40,
+  });
+
   return (
     <Card className="hidden p-0 md:block">
       <div className="overflow-x-auto">
@@ -57,7 +65,7 @@ export default function RelatorioDesktopTable({
                 </td>
               </tr>
             ) : (
-              items.map((item) => {
+              visibleItems.map((item) => {
                 const canManage = canManageItem(item) && !isReadOnly;
 
                 return (
@@ -98,6 +106,19 @@ export default function RelatorioDesktopTable({
           </tbody>
         </table>
       </div>
+
+      {!isLoading && items.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 border-t border-surface-200 px-4 py-3">
+          <p className="text-xs text-text-700">
+            Mostrando {visibleCount} de {items.length} registro(s).
+          </p>
+          {hasMore ? (
+            <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={showMore}>
+              Carregar mais
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </Card>
   );
 }

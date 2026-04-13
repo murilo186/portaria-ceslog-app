@@ -1,5 +1,7 @@
+import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import { perfilPessoaLabel } from "../../../utils/perfilPessoa";
 import type { Relatorio } from "../../../types/relatorio";
 import { memo, useMemo, type ReactNode } from "react";
@@ -21,12 +23,19 @@ function RegistroDetalheTable({
   renderHighlightedText,
   getAutorLabel,
 }: RegistroDetalheTableProps) {
+  const items = relatorio?.itens ?? [];
+  const { visibleCount, visibleItems, hasMore, showMore } = useIncrementalRender({
+    items,
+    initialCount: 40,
+    step: 40,
+  });
+
   const renderedRows = useMemo(() => {
-    if (!relatorio || relatorio.itens.length === 0) {
+    if (visibleItems.length === 0) {
       return null;
     }
 
-    return relatorio.itens.map((item) => (
+    return visibleItems.map((item) => (
       <tr key={item.id}>
         <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.empresa, appliedSearchFilter)}</td>
         <td className="px-4 py-3 text-sm text-text-900">{renderHighlightedText(item.placaVeiculo, appliedSearchFilter)}</td>
@@ -44,7 +53,7 @@ function RegistroDetalheTable({
         ) : null}
       </tr>
     ));
-  }, [appliedSearchFilter, getAutorLabel, isAdmin, relatorio, renderHighlightedText]);
+  }, [appliedSearchFilter, getAutorLabel, isAdmin, renderHighlightedText, visibleItems]);
 
   return (
     <Card className="p-0">
@@ -69,7 +78,7 @@ function RegistroDetalheTable({
                   Carregando...
                 </td>
               </tr>
-            ) : !relatorio || relatorio.itens.length === 0 ? (
+            ) : items.length === 0 ? (
               <tr>
                 <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-text-700">
                   Nenhum item neste registro.
@@ -79,6 +88,19 @@ function RegistroDetalheTable({
           </tbody>
         </table>
       </div>
+
+      {!isLoading && items.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 border-t border-surface-200 px-4 py-3">
+          <p className="text-xs text-text-700">
+            Mostrando {visibleCount} de {items.length} item(ns).
+          </p>
+          {hasMore ? (
+            <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={showMore}>
+              Carregar mais
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </Card>
   );
 }

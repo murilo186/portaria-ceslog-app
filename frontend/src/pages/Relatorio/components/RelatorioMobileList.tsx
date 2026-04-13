@@ -1,5 +1,7 @@
-﻿import Card from "../../../components/Card";
+import Button from "../../../components/Button";
+import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import type { RelatorioItem } from "../../../types/relatorio";
 
 type RelatorioMobileListProps = {
@@ -27,6 +29,12 @@ export default function RelatorioMobileList({
   getAutorLabel,
   perfilPessoaLabel,
 }: RelatorioMobileListProps) {
+  const { visibleCount, visibleItems, hasMore, showMore } = useIncrementalRender({
+    items,
+    initialCount: 20,
+    step: 20,
+  });
+
   return (
     <div className="space-y-3 md:hidden">
       {isLoading ? (
@@ -38,7 +46,7 @@ export default function RelatorioMobileList({
           <p className="text-sm text-text-700">Nenhum registro adicionado até o momento.</p>
         </Card>
       ) : (
-        items.map((item) => {
+        visibleItems.map((item) => {
           const canManage = canManageItem(item) && !isReadOnly;
 
           return (
@@ -89,6 +97,19 @@ export default function RelatorioMobileList({
           );
         })
       )}
+
+      {!isLoading && items.length > 0 ? (
+        <Card className="space-y-3">
+          <p className="text-xs text-text-700">
+            Mostrando {visibleCount} de {items.length} registro(s).
+          </p>
+          {hasMore ? (
+            <Button type="button" variant="secondary" className="w-full" onClick={showMore}>
+              Carregar mais
+            </Button>
+          ) : null}
+        </Card>
+      ) : null}
     </div>
   );
 }
