@@ -1,26 +1,14 @@
 import { AppError } from "../../middlewares/errorMiddleware";
-import {
-  getClosedReportsCache,
-  getOpenReportCache,
-  getReportDetailCache,
-  invalidateRelatorioReadCaches,
-  setClosedReportsCache,
-  setOpenReportCache,
-  setReportDetailCache,
-  type ClosedReportsResponse,
-} from "./cache";
-import { assertCanManageItem, getDateRange } from "./policies";
-import { closeStaleOpenReports } from "./staleReports";
-import { sanitizeNullableText, sanitizeText } from "../../utils/sanitize";
 import { Prisma } from "@prisma/client";
+import { type ClosedReportsResponse } from "./cache";
+import { relatorioRuntimeDeps, type RelatorioRuntimeDeps } from "./dependencies";
 import type { IRelatorioRepository } from "../../repositories/relatorioRepository";
 import type { AuthenticatedUser } from "../../types/auth";
 import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../../types/relatorio";
-import { getCurrentBusinessDateKey, getCurrentDate } from "../../utils/clock";
-import { getBusinessDateKey } from "../../utils/date";
 
 export type RelatorioServiceDeps = {
   repository: IRelatorioRepository;
+  runtime?: RelatorioRuntimeDeps;
 };
 
 export type RelatorioServiceApi = {
@@ -64,13 +52,13 @@ export type RelatorioServiceApi = {
   closeRelatorioService(relatorioId: number): ReturnType<IRelatorioRepository["updateRelatorioAsClosed"]>;
 };
 
-export function createRelatorioService({ repository }: RelatorioServiceDeps): RelatorioServiceApi {
+export function createRelatorioService({ repository, runtime = relatorioRuntimeDeps }: RelatorioServiceDeps): RelatorioServiceApi {
   async function createOpenReport() {
     try {
-      return await repository.createOpenReportWithItems(getCurrentDate());
+      return await repository.createOpenReportWithItems(runtime.clock.getCurrentDate());
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Já existe um relatório para o dia atual.", 409, "DAILY_REPORT_ALREADY_EXISTS");
+        throw new AppError("Ja existe um relatorio para o dia atual.", 409, "DAILY_REPORT_ALREADY_EXISTS");
       }
 
       throw error;
@@ -81,40 +69,44 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     const item = await repository.findManagedItem(itemId);
 
     if (!item || item.relatorioId !== relatorioId) {
-      throw new AppError("Item do relatório não encontrado", 404, "ITEM_NOT_FOUND");
+      throw new AppError("Item do relatorio nao encontrado", 404, "ITEM_NOT_FOUND");
     }
 
     return item;
   }
 
   async function getOpenReportService() {
-    const cached = getOpenReportCache();
+    const cached = runtime.cache.getOpenReportCache();
 
-    if (cached && cached.status === "ABERTO" && getBusinessDateKey(cached.dataRelatorio) === getCurrentBusinessDateKey()) {
+    if (
+      cached &&
+      cached.status === "ABERTO" &&
+      runtime.clock.getBusinessDateKey(cached.dataRelatorio) === runtime.clock.getCurrentBusinessDateKey()
+    ) {
       return cached;
     }
 
-    await closeStaleOpenReports(repository);
+    await runtime.staleReports.closeStaleOpenReports(repository);
     const openReport = await repository.findOpenReportWithItems();
 
     if (openReport) {
-      setOpenReportCache(openReport);
+      runtime.cache.setOpenReportCache(openReport);
     }
 
     return openReport;
   }
 
   async function createNewReportService() {
-    await closeStaleOpenReports(repository);
+    await runtime.staleReports.closeStaleOpenReports(repository);
 
     const report = await repository.findOpenReportWithItems();
 
     if (report) {
-      throw new AppError("Já existe um relatório em aberto.", 409, "OPEN_REPORT_EXISTS");
+      throw new AppError("Ja existe um relatorio em aberto.", 409, "OPEN_REPORT_EXISTS");
     }
 
     const created = await createOpenReport();
-    invalidateRelatorioReadCaches(created.id);
+    runtime.cache.invalidateRelatorioReadCaches(created.id);
 
     return created;
   }
@@ -128,7 +120,7 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
 
     try {
       const created = await createOpenReport();
-      invalidateRelatorioReadCaches(created.id);
+      runtime.cache.invalidateRelatorioReadCaches(created.id);
       return created;
     } catch (error) {
       if (error instanceof AppError && error.code === "DAILY_REPORT_ALREADY_EXISTS") {
@@ -148,7 +140,7 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
   }
 
   async function listClosedReportsService(query: ClosedReportsQuery) {
-    const cached = getClosedReportsCache(query);
+    const cached = runtime.cache.getClosedReportsCache(query);
 
     if (cached) {
       return cached;
@@ -157,7 +149,7 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     const page = Math.max(1, query.page);
     const pageSize = Math.min(50, Math.max(1, query.pageSize));
     const normalizedSearch = query.busca?.trim();
-    const dateRange = getDateRange(query.data);
+    const dateRange = runtime.policies.getDateRange(query.data);
 
     const where: Prisma.RelatorioWhereInput = {
       status: "FECHADO",
@@ -205,12 +197,12 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
       },
     };
 
-    setClosedReportsCache(query, payload);
+    runtime.cache.setClosedReportsCache(query, payload);
     return payload;
   }
 
   async function getReportByIdService(relatorioId: number) {
-    const cached = getReportDetailCache(relatorioId);
+    const cached = runtime.cache.getReportDetailCache(relatorioId);
 
     if (cached) {
       return cached;
@@ -219,10 +211,10 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     const relatorio = await repository.findReportByIdWithItems(relatorioId);
 
     if (!relatorio) {
-      throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
+      throw new AppError("Relatorio nao encontrado", 404, "REPORT_NOT_FOUND");
     }
 
-    setReportDetailCache(relatorioId, relatorio);
+    runtime.cache.setReportDetailCache(relatorioId, relatorio);
     return relatorio;
   }
 
@@ -234,27 +226,27 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     const relatorio = await repository.findReportStatusById(relatorioId);
 
     if (!relatorio) {
-      throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
+      throw new AppError("Relatorio nao encontrado", 404, "REPORT_NOT_FOUND");
     }
 
     if (relatorio.status === "FECHADO") {
-      throw new AppError("Relatório fechado. Não é possível adicionar itens.", 409, "REPORT_CLOSED");
+      throw new AppError("Relatorio fechado. Nao e possivel adicionar itens.", 409, "REPORT_CLOSED");
     }
 
     const created = await repository.createRelatorioItem({
       relatorioId: relatorio.id,
       usuarioId: user.id,
       perfilPessoa: payload.perfilPessoa,
-      empresa: sanitizeText(payload.empresa),
+      empresa: runtime.sanitize.sanitizeText(payload.empresa),
       placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-      nome: sanitizeText(payload.nome),
-      horaEntrada: sanitizeNullableText(payload.horaEntrada),
-      horaSaida: sanitizeNullableText(payload.horaSaida),
-      observacoes: sanitizeNullableText(payload.observacoes),
+      nome: runtime.sanitize.sanitizeText(payload.nome),
+      horaEntrada: runtime.sanitize.sanitizeNullableText(payload.horaEntrada),
+      horaSaida: runtime.sanitize.sanitizeNullableText(payload.horaSaida),
+      observacoes: runtime.sanitize.sanitizeNullableText(payload.observacoes),
       turno: user.turno,
     });
 
-    invalidateRelatorioReadCaches(relatorio.id);
+    runtime.cache.invalidateRelatorioReadCaches(relatorio.id);
 
     return {
       ...created,
@@ -276,19 +268,19 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     user: AuthenticatedUser,
   ) {
     const item = await getManagedRelatorioItem(relatorioId, itemId);
-    assertCanManageItem(user, item.usuarioId, item.relatorio.status);
+    runtime.policies.assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
     const updated = await repository.updateRelatorioItem(item.id, {
       perfilPessoa: payload.perfilPessoa,
-      empresa: sanitizeText(payload.empresa),
+      empresa: runtime.sanitize.sanitizeText(payload.empresa),
       placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
-      nome: sanitizeText(payload.nome),
-      horaEntrada: sanitizeNullableText(payload.horaEntrada),
-      horaSaida: sanitizeNullableText(payload.horaSaida),
-      observacoes: sanitizeNullableText(payload.observacoes),
+      nome: runtime.sanitize.sanitizeText(payload.nome),
+      horaEntrada: runtime.sanitize.sanitizeNullableText(payload.horaEntrada),
+      horaSaida: runtime.sanitize.sanitizeNullableText(payload.horaSaida),
+      observacoes: runtime.sanitize.sanitizeNullableText(payload.observacoes),
     });
 
-    invalidateRelatorioReadCaches(item.relatorioId);
+    runtime.cache.invalidateRelatorioReadCaches(item.relatorioId);
 
     return {
       ...updated,
@@ -298,10 +290,10 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
 
   async function deleteRelatorioItemService(relatorioId: number, itemId: number, user: AuthenticatedUser) {
     const item = await getManagedRelatorioItem(relatorioId, itemId);
-    assertCanManageItem(user, item.usuarioId, item.relatorio.status);
+    runtime.policies.assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
     await repository.deleteRelatorioItemById(item.id);
-    invalidateRelatorioReadCaches(item.relatorioId);
+    runtime.cache.invalidateRelatorioReadCaches(item.relatorioId);
 
     return { ok: true } as const;
   }
@@ -310,15 +302,15 @@ export function createRelatorioService({ repository }: RelatorioServiceDeps): Re
     const relatorio = await repository.findReportById(relatorioId);
 
     if (!relatorio) {
-      throw new AppError("Relatório não encontrado", 404, "REPORT_NOT_FOUND");
+      throw new AppError("Relatorio nao encontrado", 404, "REPORT_NOT_FOUND");
     }
 
     if (relatorio.status === "FECHADO") {
       return relatorio;
     }
 
-    const closed = await repository.updateRelatorioAsClosed(relatorio.id, getCurrentDate());
-    invalidateRelatorioReadCaches(relatorio.id);
+    const closed = await repository.updateRelatorioAsClosed(relatorio.id, runtime.clock.getCurrentDate());
+    runtime.cache.invalidateRelatorioReadCaches(relatorio.id);
     return closed;
   }
 
