@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PaginationMeta } from "../../../types/relatorio";
 import { initialMeta, parseInitialFilters } from "./registrosPageHelpers";
@@ -22,7 +22,7 @@ export function useRegistrosPage() {
     setSearchParams: (next) => setSearchParams(next, { replace: true }),
   });
 
-  const { registrosFechados, meta: remoteMeta, isLoading, errorMessage } = useRegistrosData({
+  const { registrosFechados, meta: remoteMeta, isLoading, isFetching, errorMessage } = useRegistrosData({
     appliedDateFilter: filtros.appliedDateFilter,
     appliedSearchFilter: filtros.appliedSearchFilter,
     page,
@@ -51,6 +51,7 @@ export function useRegistrosPage() {
     setSearchFilter: filtros.setSearchFilter,
     appliedSearchFilter: filtros.appliedSearchFilter,
     isLoading,
+    isFetching,
     errorMessage,
     handleApplyFilters: filtros.handleApplyFilters,
     handleClearFilters: filtros.handleClearFilters,

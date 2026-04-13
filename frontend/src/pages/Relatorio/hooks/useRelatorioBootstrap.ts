@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { getRelatorioAberto } from "../../../services/relatorioService";
 import { getAuthSession } from "../../../services/authStorage";
 import { ApiError } from "../../../services/api";
 import { getUserErrorMessage } from "../../../services/errorService";
+import { queryKeys } from "../../../services/queryKeys";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import type { RelatorioItem } from "../../../types/relatorio";
@@ -21,48 +23,57 @@ export function useRelatorioBootstrap({ setFeedback }: UseRelatorioBootstrapPara
   const [turnoAtual, setTurnoAtual] = useState<string>("-");
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const authSession = getAuthSession();
 
   useEffect(() => {
-    const auth = getAuthSession();
-
-    if (!auth) {
+    if (!authSession) {
       navigate("/");
       return;
     }
 
-    const authSession = auth;
-
     setUsuarioLogado(authSession.usuario);
     setToken(authSession.token);
     setTurnoAtual(authSession.usuario.turno ?? "-");
+  }, [authSession, navigate]);
 
-    async function loadRelatorio() {
-      try {
-        const relatorio = await getRelatorioAberto(authSession.token);
-        setRelatorioId(relatorio.id);
-        setRelatorioStatus(relatorio.status);
-        setItens(relatorio.itens);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          navigate("/dashboard", {
-            replace: true,
-            state: { message: "Não existe relatório em aberto para continuar." },
-          });
-          return;
-        }
+  const openReportQuery = useQuery({
+    queryKey: queryKeys.openReport(authSession?.usuario.id ?? 0),
+    enabled: Boolean(authSession),
+    queryFn: () => getRelatorioAberto(authSession!.token),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    retry: false,
+  });
 
-        setFeedback({
-          type: "error",
-          message: getUserErrorMessage(error, "Erro ao carregar relatório"),
-        });
-      } finally {
-        setIsLoading(false);
-      }
+  useEffect(() => {
+    if (!openReportQuery.data) {
+      return;
     }
 
-    void loadRelatorio();
-  }, [navigate, setFeedback]);
+    setRelatorioId(openReportQuery.data.id);
+    setRelatorioStatus(openReportQuery.data.status);
+    setItens(openReportQuery.data.itens);
+  }, [openReportQuery.data]);
+
+  useEffect(() => {
+    if (!openReportQuery.error) {
+      return;
+    }
+
+    if (openReportQuery.error instanceof ApiError && openReportQuery.error.status === 404) {
+      navigate("/dashboard", {
+        replace: true,
+        state: { message: "Não existe relatório em aberto para continuar." },
+      });
+      return;
+    }
+
+    setFeedback({
+      type: "error",
+      message: getUserErrorMessage(openReportQuery.error, "Erro ao carregar relatório"),
+    });
+  }, [navigate, openReportQuery.error, setFeedback]);
 
   return {
     itens,
@@ -73,6 +84,6 @@ export function useRelatorioBootstrap({ setFeedback }: UseRelatorioBootstrapPara
     turnoAtual,
     usuarioLogado,
     token,
-    isLoading,
+    isLoading: openReportQuery.isLoading,
   };
 }

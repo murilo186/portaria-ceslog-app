@@ -15,6 +15,7 @@ export default function RegistrosPage() {
     setSearchFilter,
     appliedSearchFilter,
     isLoading,
+    isFetching,
     errorMessage,
     handleApplyFilters,
     handleClearFilters,
@@ -60,6 +61,7 @@ export default function RegistrosPage() {
             ? `${meta.total} evidencias encontradas para "${appliedSearchFilter}".`
             : `${meta.total} registro(s) fechado(s) encontrado(s).`}
         </p>
+        {isFetching && !isLoading ? <p className="text-xs text-text-700">Atualizando resultados...</p> : null}
       </Card>
 
       <Card className="p-0">
@@ -89,7 +91,7 @@ export default function RegistrosPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-text-700">
-          Pagina {meta.page} de {meta.totalPages} · {meta.total} registro(s)
+          Pagina {meta.page} de {meta.totalPages} Â· {meta.total} registro(s)
         </p>
         <div className="flex gap-2">
           <Button

@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { parseInitialFilters } from "./registrosPageHelpers";
 
 type UseRegistrosFiltersParams = {
@@ -15,6 +16,7 @@ export function useRegistrosFilters({ page, setPage, searchParams, setSearchPara
   const [searchFilter, setSearchFilter] = useState(initialSearchFilter);
   const [appliedDateFilter, setAppliedDateFilter] = useState(initialDateFilter);
   const [appliedSearchFilter, setAppliedSearchFilter] = useState(initialSearchFilter.trim());
+  const debouncedSearchFilter = useDebouncedValue(searchFilter, 400);
 
   const updateSearchParams = (next: { data?: string; busca?: string; page?: number }) => {
     const params = new URLSearchParams();
@@ -34,6 +36,17 @@ export function useRegistrosFilters({ page, setPage, searchParams, setSearchPara
     setSearchParams(params);
   };
 
+  const applySearchFilter = (normalizedSearch: string) => {
+    setPage(1);
+    setAppliedSearchFilter(normalizedSearch);
+
+    updateSearchParams({
+      data: appliedDateFilter || undefined,
+      busca: normalizedSearch || undefined,
+      page: 1,
+    });
+  };
+
   const handleApplyFilters = () => {
     const normalizedSearch = searchFilter.trim();
 
@@ -46,6 +59,16 @@ export function useRegistrosFilters({ page, setPage, searchParams, setSearchPara
       page: 1,
     });
   };
+
+  useEffect(() => {
+    const normalizedSearch = debouncedSearchFilter.trim();
+
+    if (normalizedSearch === appliedSearchFilter) {
+      return;
+    }
+
+    applySearchFilter(normalizedSearch);
+  }, [appliedDateFilter, appliedSearchFilter, debouncedSearchFilter]);
 
   const handleClearFilters = () => {
     setDateFilter("");

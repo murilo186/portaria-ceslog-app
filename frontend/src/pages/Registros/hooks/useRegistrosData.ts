@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthSession } from "../../../services/authStorage";
@@ -47,13 +47,16 @@ export function useRegistrosData({ appliedDateFilter, appliedSearchFilter, page,
         data: appliedDateFilter || undefined,
         busca: appliedSearchFilter || undefined,
       }),
-    staleTime: 20_000,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 
   return {
     registrosFechados: (query.data?.data ?? []) as RelatorioResumo[],
     meta: query.data?.meta ?? { ...EMPTY_META, page, pageSize },
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     errorMessage: query.error ? getUserErrorMessage(query.error, "Erro ao carregar registros") : null,
   };
 }

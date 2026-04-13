@@ -1,10 +1,11 @@
-﻿import { getAuthSession } from "../../../services/authStorage";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAuthSession } from "../../../services/authStorage";
 import { ApiError } from "../../../services/api";
 import { getUserErrorMessage } from "../../../services/errorService";
 import { createNovoRelatorio, getRelatorioAberto } from "../../../services/relatorioService";
-import { useEffect, useState } from "react";
+import { queryKeys } from "../../../services/queryKeys";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { Relatorio } from "../../../types/relatorio";
 
 type DashboardLocationState = {
   message?: string;
@@ -20,84 +21,96 @@ export function formatDate(dateIso: string): string {
 export function useDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
 
-  const [isLoadingAction, setIsLoadingAction] = useState(false);
-  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
-  const [openReport, setOpenReport] = useState<Relatorio | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const auth = getAuthSession();
+
+  const authSession = useMemo(() => auth, [auth]);
+  const userIsAdmin = authSession?.usuario.perfil === "ADMIN";
 
   useEffect(() => {
-    const auth = getAuthSession();
-
-    if (!auth) {
+    if (!authSession) {
       navigate("/");
       return;
     }
 
-    const authSession = auth;
-    const userIsAdmin = authSession.usuario.perfil === "ADMIN";
-
     if (userIsAdmin) {
       navigate("/admin", { replace: true });
+    }
+  }, [authSession, navigate, userIsAdmin]);
+
+  const openReportQuery = useQuery({
+    queryKey: queryKeys.openReport(authSession?.usuario.id ?? 0),
+    enabled: Boolean(authSession && !userIsAdmin),
+    queryFn: async () => {
+      try {
+        return await getRelatorioAberto(authSession!.token);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+
+        throw error;
+      }
+    },
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+  });
+
+  useEffect(() => {
+    if (!openReportQuery.error) {
       return;
     }
 
-    async function loadOpenReport() {
-      setIsLoadingStatus(true);
-      setErrorMessage(null);
+    setErrorMessage(getUserErrorMessage(openReportQuery.error, "NÃ£o foi possÃ­vel carregar o status do relatÃ³rio"));
+  }, [openReportQuery.error]);
 
-      try {
-        const report = await getRelatorioAberto(authSession.token);
-        setOpenReport(report);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          setOpenReport(null);
-        } else {
-          setErrorMessage(getUserErrorMessage(error, "Não foi possível carregar o status do relatório"));
-        }
-      } finally {
-        setIsLoadingStatus(false);
+  const createReportMutation = useMutation({
+    mutationFn: async () => {
+      if (!authSession) {
+        throw new ApiError("SessÃ£o expirada", 401);
       }
-    }
 
-    void loadOpenReport();
-  }, [navigate]);
+      return createNovoRelatorio(authSession.token);
+    },
+    onSuccess: (createdReport) => {
+      if (!authSession) {
+        return;
+      }
+
+      queryClient.setQueryData(queryKeys.openReport(authSession.usuario.id), createdReport);
+      navigate("/relatorio");
+    },
+    onError: (error) => {
+      setErrorMessage(getUserErrorMessage(error, "NÃ£o foi possÃ­vel criar o relatÃ³rio"));
+    },
+  });
 
   const locationState = (location.state as DashboardLocationState | null) ?? null;
+  const openReport = openReportQuery.data ?? null;
   const hasOpenReport = openReport !== null;
-  const auth = getAuthSession();
-  const turnoAtual = auth?.usuario.turno ?? "-";
-  const usuarioAtual = auth?.usuario.nome ?? "";
+  const turnoAtual = authSession?.usuario.turno ?? "-";
+  const usuarioAtual = authSession?.usuario.nome ?? "";
 
   const handleCreateReport = async () => {
-    const authSession = getAuthSession();
-
     if (!authSession) {
       navigate("/");
       return;
     }
 
     if (hasOpenReport) {
-      setErrorMessage("Já existe um relatório em aberto. Continue o relatório atual.");
+      setErrorMessage("JÃ¡ existe um relatÃ³rio em aberto. Continue o relatÃ³rio atual.");
       return;
     }
 
-    setIsLoadingAction(true);
     setErrorMessage(null);
-
-    try {
-      await createNovoRelatorio(authSession.token);
-      navigate("/relatorio");
-    } catch (error) {
-      setErrorMessage(getUserErrorMessage(error, "Não foi possível criar o relatório"));
-    } finally {
-      setIsLoadingAction(false);
-    }
+    await createReportMutation.mutateAsync();
   };
 
   const handleContinueReport = () => {
     if (!hasOpenReport) {
-      setErrorMessage("Não existe relatório em aberto no momento.");
+      setErrorMessage("NÃ£o existe relatÃ³rio em aberto no momento.");
       return;
     }
 
@@ -109,8 +122,9 @@ export function useDashboardPage() {
   };
 
   return {
-    isLoadingAction,
-    isLoadingStatus,
+    isLoadingAction: createReportMutation.isPending,
+    isLoadingStatus: openReportQuery.isLoading,
+    isRefreshingStatus: openReportQuery.isFetching && !openReportQuery.isLoading,
     openReport,
     errorMessage,
     locationState,
