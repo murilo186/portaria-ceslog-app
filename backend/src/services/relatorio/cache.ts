@@ -1,6 +1,7 @@
 import { clearCacheByPrefix, getCachedValue, setCachedValue } from "../../lib/memoryCache";
-import type { RelatorioComItens, RelatorioResumo } from "../../repositories/relatorioRepository";
+import type { RelatorioComItens } from "../../repositories/relatorioRepository";
 import type { ClosedReportsQuery } from "../../types/relatorio";
+import type { RelatorioResumoResponse } from "./dtoMappers";
 
 const CLOSED_REPORTS_CACHE_PREFIX = "relatorios:fechados:";
 const REPORT_DETAIL_CACHE_PREFIX = "relatorio:detalhe:";
@@ -10,7 +11,7 @@ const REPORT_DETAIL_CACHE_TTL_MS = 20_000;
 const OPEN_REPORT_CACHE_TTL_MS = 5_000;
 
 export type ClosedReportsResponse = {
-  data: RelatorioResumo[];
+  data: RelatorioResumoResponse[];
   meta: {
     page: number;
     pageSize: number;

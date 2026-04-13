@@ -38,6 +38,14 @@ const relatorioSummarySelect = {
   },
 } as const;
 
+const relatorioBaseSelect = {
+  id: true,
+  dataRelatorio: true,
+  status: true,
+  criadoEm: true,
+  finalizadoEm: true,
+} as const;
+
 const managedItemInclude = {
   relatorio: true,
   usuario: {
@@ -55,6 +63,14 @@ export type RelatorioComItens = Prisma.RelatorioGetPayload<{
 
 export type RelatorioResumo = Prisma.RelatorioGetPayload<{
   select: typeof relatorioSummarySelect;
+}>;
+
+export type RelatorioBase = Prisma.RelatorioGetPayload<{
+  select: typeof relatorioBaseSelect;
+}>;
+
+export type RelatorioItemComUsuario = Prisma.RelatorioItemGetPayload<{
+  include: typeof relatorioItensInclude.include;
 }>;
 
 export type RelatorioItemGerenciado = Prisma.RelatorioItemGetPayload<{
@@ -80,6 +96,8 @@ export interface IRelatorioRepository {
   countClosedReports(where: Prisma.RelatorioWhereInput): Promise<number>;
   listClosedReports(where: Prisma.RelatorioWhereInput, page: number, pageSize: number): Promise<RelatorioResumo[]>;
   findReportByIdWithItems(relatorioId: number): Promise<RelatorioComItens | null>;
+  findReportByIdWithoutItems(relatorioId: number): Promise<RelatorioBase | null>;
+  listReportItemsByCursor(relatorioId: number, itemCursor: number | undefined, itemLimit: number): Promise<RelatorioItemComUsuario[]>;
   findReportById(relatorioId: number): Promise<Prisma.RelatorioGetPayload<object> | null>;
   findReportStatusById(relatorioId: number): Promise<RelatorioStatusMinimo | null>;
   createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput): Promise<Prisma.RelatorioItemGetPayload<object>>;
@@ -165,6 +183,27 @@ export const relatorioRepository: IRelatorioRepository = {
     return prisma.relatorio.findUnique({
       where: { id: relatorioId },
       include: relatorioWithItensInclude,
+    });
+  },
+
+  async findReportByIdWithoutItems(relatorioId: number) {
+    return prisma.relatorio.findUnique({
+      where: { id: relatorioId },
+      select: relatorioBaseSelect,
+    });
+  },
+
+  async listReportItemsByCursor(relatorioId: number, itemCursor: number | undefined, itemLimit: number) {
+    return prisma.relatorioItem.findMany({
+      where: {
+        relatorioId,
+        ...(itemCursor ? { id: { lt: itemCursor } } : {}),
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: itemLimit + 1,
+      include: relatorioItensInclude.include,
     });
   },
 

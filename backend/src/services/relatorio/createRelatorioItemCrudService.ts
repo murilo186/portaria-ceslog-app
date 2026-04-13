@@ -1,6 +1,6 @@
-import { AppError } from "../../middlewares/errorMiddleware";
 import type { AuthenticatedUser } from "../../types/auth";
 import type { RelatorioItemEditableInput } from "../../types/relatorio";
+import { RELATORIO_ERROR } from "./errors";
 import type { RelatorioServiceApi, RelatorioServiceContext } from "./types";
 
 export type RelatorioItemCrudServiceApi = Pick<
@@ -25,7 +25,7 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
     const item = await repository.findManagedItem(itemId);
 
     if (!item || item.relatorioId !== relatorioId) {
-      throw new AppError("Item do relatorio nao encontrado", 404, "ITEM_NOT_FOUND");
+      throw RELATORIO_ERROR.itemNotFound();
     }
 
     return item;
@@ -39,11 +39,11 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
     const relatorio = await repository.findReportStatusById(relatorioId);
 
     if (!relatorio) {
-      throw new AppError("Relatorio nao encontrado", 404, "REPORT_NOT_FOUND");
+      throw RELATORIO_ERROR.reportNotFound();
     }
 
     if (relatorio.status === "FECHADO") {
-      throw new AppError("Relatorio fechado. Nao e possivel adicionar itens.", 409, "REPORT_CLOSED");
+      throw RELATORIO_ERROR.reportClosed();
     }
 
     const created = await repository.createRelatorioItem({

@@ -23,4 +23,9 @@ export type ClosedReportsQuery = {
   busca?: string;
 };
 
+export type ReportItemsCursorQuery = {
+  itemCursor?: number;
+  itemLimit: number;
+};
+
 

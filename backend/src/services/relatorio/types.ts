@@ -1,8 +1,9 @@
 import type { IRelatorioRepository } from "../../repositories/relatorioRepository";
 import type { AuthenticatedUser } from "../../types/auth";
-import type { ClosedReportsQuery, RelatorioItemEditableInput } from "../../types/relatorio";
+import type { ClosedReportsQuery, RelatorioItemEditableInput, ReportItemsCursorQuery } from "../../types/relatorio";
 import type { ClosedReportsResponse } from "./cache";
 import type { RelatorioRuntimeDeps } from "./dependencies";
+import type { RelatorioResponse, RelatorioResumoResponse } from "./dtoMappers";
 
 export type RelatorioServiceDeps = {
   repository: IRelatorioRepository;
@@ -36,12 +37,23 @@ export type RelatorioItemUpdateResult = Awaited<ReturnType<IRelatorioRepository[
 };
 
 export type RelatorioServiceApi = {
-  getOpenReportService(): ReturnType<IRelatorioRepository["findOpenReportWithItems"]>;
-  createNewReportService(): ReturnType<IRelatorioRepository["createOpenReportWithItems"]>;
-  getTodayReportService(): ReturnType<IRelatorioRepository["createOpenReportWithItems"]>;
-  listReportsService(): ReturnType<IRelatorioRepository["listReportSummaries"]>;
+  getOpenReportService(): Promise<RelatorioResponse | null>;
+  createNewReportService(): Promise<RelatorioResponse>;
+  getTodayReportService(): Promise<RelatorioResponse>;
+  listReportsService(): Promise<RelatorioResumoResponse[]>;
   listClosedReportsService(query: ClosedReportsQuery): Promise<ClosedReportsResponse>;
-  getReportByIdService(relatorioId: number): ReturnType<IRelatorioRepository["findReportByIdWithItems"]>;
+  getReportByIdService(
+    relatorioId: number,
+    query?: ReportItemsCursorQuery,
+  ): Promise<
+    (RelatorioResponse & {
+      itensPage?: {
+        itemLimit: number;
+        nextItemCursor: number | null;
+        hasMore: boolean;
+      };
+    }) | null
+  >;
   createRelatorioItemService(
     relatorioId: number,
     payload: RelatorioItemEditableInput,
@@ -54,5 +66,11 @@ export type RelatorioServiceApi = {
     user: AuthenticatedUser,
   ): Promise<RelatorioItemUpdateResult>;
   deleteRelatorioItemService(relatorioId: number, itemId: number, user: AuthenticatedUser): Promise<{ ok: true }>;
-  closeRelatorioService(relatorioId: number): ReturnType<IRelatorioRepository["updateRelatorioAsClosed"]>;
+  closeRelatorioService(relatorioId: number): Promise<{
+    id: number;
+    status: "ABERTO" | "FECHADO";
+    dataRelatorio: string;
+    criadoEm: string;
+    finalizadoEm: string | null;
+  }>;
 };

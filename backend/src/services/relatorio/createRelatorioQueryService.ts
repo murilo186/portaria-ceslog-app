@@ -1,6 +1,7 @@
-import { AppError } from "../../middlewares/errorMiddleware";
 import { Prisma } from "@prisma/client";
-import type { ClosedReportsQuery } from "../../types/relatorio";
+import type { ClosedReportsQuery, ReportItemsCursorQuery } from "../../types/relatorio";
+import { RELATORIO_ERROR } from "./errors";
+import { toRelatorioBaseResponse, toRelatorioResponse, toRelatorioResumoResponse } from "./dtoMappers";
 import type { RelatorioServiceApi, RelatorioServiceContext } from "./types";
 
 export type RelatorioQueryServiceApi = Pick<
@@ -10,7 +11,8 @@ export type RelatorioQueryServiceApi = Pick<
 
 export function createRelatorioQueryService({ repository, runtime }: RelatorioServiceContext): RelatorioQueryServiceApi {
   async function listReportsService() {
-    return repository.listReportSummaries();
+    const reports = await repository.listReportSummaries();
+    return reports.map((report) => toRelatorioResumoResponse(report));
   }
 
   async function listClosedReportsService(query: ClosedReportsQuery) {
@@ -63,7 +65,7 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
     const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
 
     const payload = {
-      data,
+      data: data.map((report) => toRelatorioResumoResponse(report)),
       meta: {
         page,
         pageSize,
@@ -76,21 +78,43 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
     return payload;
   }
 
-  async function getReportByIdService(relatorioId: number) {
+  async function getReportByIdService(relatorioId: number, query?: ReportItemsCursorQuery) {
+    if (query?.itemLimit) {
+      const relatorio = await repository.findReportByIdWithoutItems(relatorioId);
+
+      if (!relatorio) {
+        throw RELATORIO_ERROR.reportNotFound();
+      }
+
+      const rawItems = await repository.listReportItemsByCursor(relatorioId, query.itemCursor, query.itemLimit);
+      const hasMore = rawItems.length > query.itemLimit;
+      const items = hasMore ? rawItems.slice(0, query.itemLimit) : rawItems;
+      const nextItemCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
+
+      return {
+        ...toRelatorioBaseResponse(relatorio, items),
+        itensPage: {
+          itemLimit: query.itemLimit,
+          nextItemCursor,
+          hasMore,
+        },
+      };
+    }
+
     const cached = runtime.cache.getReportDetailCache(relatorioId);
 
     if (cached) {
-      return cached;
+      return toRelatorioResponse(cached);
     }
 
     const relatorio = await repository.findReportByIdWithItems(relatorioId);
 
     if (!relatorio) {
-      throw new AppError("Relatorio nao encontrado", 404, "REPORT_NOT_FOUND");
+      throw RELATORIO_ERROR.reportNotFound();
     }
 
     runtime.cache.setReportDetailCache(relatorioId, relatorio);
-    return relatorio;
+    return toRelatorioResponse(relatorio);
   }
 
   return {
