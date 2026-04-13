@@ -63,6 +63,10 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
   }
 
   async function deleteUsuarioService(usuarioId: number, currentAdminId: number) {
+    return setUsuarioAtivoService(usuarioId, currentAdminId, false);
+  }
+
+  async function setUsuarioAtivoService(usuarioId: number, currentAdminId: number, ativo: boolean) {
     const usuario = await repository.findByIdForManagement(usuarioId);
 
     if (!usuario) {
@@ -77,11 +81,16 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
       throw new AppError("Nao e permitido excluir conta de administrador.", 409, "ADMIN_DELETE_BLOCKED");
     }
 
-    if (!usuario.ativo) {
+    if (usuario.ativo === ativo) {
       return { ok: true } as const;
     }
 
-    await repository.deactivateById(usuarioId);
+    if (ativo) {
+      await repository.activateById(usuarioId);
+    } else {
+      await repository.deactivateById(usuarioId);
+    }
+
     return { ok: true } as const;
   }
 
@@ -110,6 +119,7 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
     listUsuariosService,
     createUsuarioService,
     deleteUsuarioService,
+    setUsuarioAtivoService,
     updateUsuarioSenhaService,
   };
 }

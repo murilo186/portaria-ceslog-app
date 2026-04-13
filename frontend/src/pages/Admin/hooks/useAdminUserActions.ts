@@ -1,8 +1,8 @@
-﻿import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { getUserErrorMessage } from "../../../services/errorService";
 import { queryKeys } from "../../../services/queryKeys";
-import { createUsuario, deleteUsuario } from "../../../services/usuarioService";
+import { createUsuario, updateUsuarioAtivo } from "../../../services/usuarioService";
 import type { AuthState } from "../../../types/auth";
 import type { UsuarioAdminListItem } from "../../../types/usuario";
 import type { Feedback, NovoUsuarioForm } from "./adminPage.types";
@@ -25,8 +25,9 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
       createUsuario(payload, token),
   });
 
-  const deleteUsuarioMutation = useMutation({
-    mutationFn: ({ token, usuarioId }: { token: string; usuarioId: number }) => deleteUsuario(usuarioId, token),
+  const updateUsuarioAtivoMutation = useMutation({
+    mutationFn: ({ token, usuarioId, ativo }: { token: string; usuarioId: number; ativo: boolean }) =>
+      updateUsuarioAtivo(usuarioId, ativo, token),
   });
 
   const invalidateAdminQueries = async (adminUserId: number) => {
@@ -75,43 +76,50 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
     }
   };
 
-  const handleDeleteUsuario = async (usuarioId: number) => {
+  const handleToggleUsuarioAtivo = async (usuarioId: number, ativoAtual: boolean) => {
     if (!auth) {
       navigateToLogin();
       return;
     }
 
-    const shouldDelete = window.confirm("Confirma inativar este operador? Ele nao conseguira mais logar.");
+    const shouldProceed = window.confirm(
+      ativoAtual
+        ? "Confirma inativar este operador? Ele nao conseguira mais logar."
+        : "Confirma ativar este operador novamente?",
+    );
 
-    if (!shouldDelete) {
+    if (!shouldProceed) {
       return;
     }
 
     setFeedback(null);
 
     try {
-      await deleteUsuarioMutation.mutateAsync({ token: auth.token, usuarioId });
+      await updateUsuarioAtivoMutation.mutateAsync({ token: auth.token, usuarioId, ativo: !ativoAtual });
 
       queryClient.setQueryData<UsuarioAdminListItem[]>(queryKeys.adminUsers(auth.usuario.id), (previous) => {
         if (!previous) {
           return previous;
         }
 
-        return previous.map((item) => (item.id === usuarioId ? { ...item, ativo: false } : item));
+        return previous.map((item) => (item.id === usuarioId ? { ...item, ativo: !ativoAtual } : item));
       });
 
-      setFeedback({ type: "success", message: "Usuario desativado com sucesso." });
+      setFeedback({
+        type: "success",
+        message: ativoAtual ? "Usuario inativado com sucesso." : "Usuario ativado com sucesso.",
+      });
       await invalidateAdminQueries(auth.usuario.id);
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel inativar usuario.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel atualizar status do usuario.") });
     }
   };
 
   return {
-    isSubmittingUsuario: createUsuarioMutation.isPending || deleteUsuarioMutation.isPending,
+    isSubmittingUsuario: createUsuarioMutation.isPending || updateUsuarioAtivoMutation.isPending,
     novoUsuarioForm,
     setNovoUsuarioForm,
     handleCreateUsuario,
-    handleDeleteUsuario,
+    handleToggleUsuarioAtivo,
   };
 }

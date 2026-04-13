@@ -22,7 +22,7 @@ export default function AdminPage() {
     handleChangeNovoUsuarioSenha,
     handleChangeNovoUsuarioTurno,
     handleCreateUsuario,
-    handleDeleteUsuario,
+    handleToggleUsuarioAtivo,
     handleRefreshLogs,
     handleGoRegistros,
     handleOpenReport,
@@ -45,7 +45,7 @@ export default function AdminPage() {
         onChangeSenha={handleChangeNovoUsuarioSenha}
         onChangeTurno={handleChangeNovoUsuarioTurno}
         onCreateUsuario={handleCreateUsuario}
-        onDeleteUsuario={handleDeleteUsuario}
+        onToggleUsuarioAtivo={handleToggleUsuarioAtivo}
       />
 
       <AdminAuditLogsCard isLoadingLogs={isLoadingLogs} logs={auditLogs} onRefreshLogs={handleRefreshLogs} />

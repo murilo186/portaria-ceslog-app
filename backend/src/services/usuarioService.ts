@@ -12,4 +12,5 @@ const usuarioService = createUsuarioServiceFactory({
 export const listUsuariosService = usuarioService.listUsuariosService;
 export const createUsuarioService = usuarioService.createUsuarioService;
 export const deleteUsuarioService = usuarioService.deleteUsuarioService;
+export const setUsuarioAtivoService = usuarioService.setUsuarioAtivoService;
 export const updateUsuarioSenhaService = usuarioService.updateUsuarioSenhaService;

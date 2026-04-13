@@ -1,8 +1,9 @@
-﻿import { listAuditLogsController } from "../controllers/auditController";
+import { listAuditLogsController } from "../controllers/auditController";
 import {
   createUsuarioController,
   deleteUsuarioController,
   listUsuariosController,
+  updateUsuarioAtivoController,
   updateUsuarioSenhaController,
 } from "../controllers/usuarioController";
 import { authMiddleware } from "../middlewares/authMiddleware";
@@ -17,6 +18,7 @@ router.get("/logs", listAuditLogsController);
 router.get("/usuarios", listUsuariosController);
 router.post("/usuarios", createUsuarioController);
 router.delete("/usuarios/:usuarioId", deleteUsuarioController);
+router.patch("/usuarios/:usuarioId/ativo", updateUsuarioAtivoController);
 router.patch("/usuarios/:usuarioId/senha", updateUsuarioSenhaController);
 
 export default router;

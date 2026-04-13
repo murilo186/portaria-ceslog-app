@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthSession } from "../../../services/authStorage";
 import type { TurnoUsuario } from "../../../types/usuario";
@@ -48,7 +48,7 @@ export function useAdminPage() {
     await refetchLogs();
   };
 
-  const { isSubmittingUsuario, novoUsuarioForm, setNovoUsuarioForm, handleCreateUsuario, handleDeleteUsuario } =
+  const { isSubmittingUsuario, novoUsuarioForm, setNovoUsuarioForm, handleCreateUsuario, handleToggleUsuarioAtivo } =
     useAdminUserActions({
       auth,
       navigateToLogin,
@@ -108,7 +108,7 @@ export function useAdminPage() {
     handleChangeNovoUsuarioSenha,
     handleChangeNovoUsuarioTurno,
     handleCreateUsuario,
-    handleDeleteUsuario,
+    handleToggleUsuarioAtivo,
     handleRefreshLogs,
     handleGoRegistros,
     handleOpenReport,

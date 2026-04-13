@@ -24,7 +24,7 @@ type AdminUsuariosSectionProps = {
   onChangeSenha: (value: string) => void;
   onChangeTurno: (turno: TurnoUsuario) => void;
   onCreateUsuario: FormEventHandler<HTMLFormElement>;
-  onDeleteUsuario: (usuarioId: number) => Promise<void>;
+  onToggleUsuarioAtivo: (usuarioId: number, ativoAtual: boolean) => Promise<void>;
 };
 
 export default function AdminUsuariosSection({
@@ -38,14 +38,14 @@ export default function AdminUsuariosSection({
   onChangeSenha,
   onChangeTurno,
   onCreateUsuario,
-  onDeleteUsuario,
+  onToggleUsuarioAtivo,
 }: AdminUsuariosSectionProps) {
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <Card className="space-y-4 xl:col-span-1">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-text-900">Criar usuário</h2>
-          <p className="text-sm text-text-700">Campos obrigatórios: nome, usuário, senha e turno.</p>
+          <h2 className="text-lg font-semibold text-text-900">Criar usuÃ¡rio</h2>
+          <p className="text-sm text-text-700">Campos obrigatÃ³rios: nome, usuÃ¡rio, senha e turno.</p>
         </div>
 
         <form className="space-y-3" onSubmit={onCreateUsuario}>
@@ -60,7 +60,7 @@ export default function AdminUsuariosSection({
 
           <Input
             id="novo-usuario"
-            label="Usuário"
+            label="UsuÃ¡rio"
             value={novoUsuarioForm.usuario}
             onChange={(event) => onChangeUsuario(event.target.value)}
             placeholder="usuario.exemplo"
@@ -73,7 +73,7 @@ export default function AdminUsuariosSection({
             type="password"
             value={novoUsuarioForm.senha}
             onChange={(event) => onChangeSenha(event.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="MÃ­nimo 6 caracteres"
             required
           />
 
@@ -83,29 +83,29 @@ export default function AdminUsuariosSection({
             value={novoUsuarioForm.turno}
             onChange={(event) => onChangeTurno(event.target.value as TurnoUsuario)}
           >
-              <option value="MANHA">MANHÃ</option>
+              <option value="MANHA">MANHÃƒ</option>
               <option value="TARDE">TARDE</option>
           </SelectField>
 
           <Button type="submit" className="w-full" disabled={isSubmittingUsuario || isLoadingUsuarios}>
-            {isSubmittingUsuario ? "Salvando..." : "Criar usuário"}
+            {isSubmittingUsuario ? "Salvando..." : "Criar usuÃ¡rio"}
           </Button>
         </form>
       </Card>
 
       <Card className="space-y-3 xl:col-span-2">
-        <h2 className="text-lg font-semibold text-text-900">Lista de usuários</h2>
+        <h2 className="text-lg font-semibold text-text-900">Lista de usuÃ¡rios</h2>
 
         {isLoadingUsuarios ? (
           <ListSkeleton rows={5} />
         ) : usuarios.length === 0 ? (
-          <p className="text-sm text-text-700">Nenhum usuário encontrado.</p>
+          <p className="text-sm text-text-700">Nenhum usuÃ¡rio encontrado.</p>
         ) : (
           <div className="space-y-2">
             {usuarios.map((item) => {
               const isCurrentUser = authUserId === item.id;
               const isOperador = item.perfil === "OPERADOR";
-              const canDelete = item.ativo && isOperador && !isCurrentUser;
+              const canToggle = isOperador && !isCurrentUser;
 
               return (
                 <div
@@ -114,7 +114,7 @@ export default function AdminUsuariosSection({
                 >
                   <div>
                     <p className="text-sm font-semibold text-text-900">{item.nome}</p>
-                    <p className="text-xs text-text-700">Usuário: {item.usuario ?? "-"}</p>
+                    <p className="text-xs text-text-700">UsuÃ¡rio: {item.usuario ?? "-"}</p>
                     <p className="text-xs text-text-700">Turno: {item.turno ?? "-"}</p>
                     <p className="text-xs text-text-700">Perfil: {item.perfil}</p>
                     <p className="text-xs text-text-700">Status: {item.ativo ? "ATIVO" : "INATIVO"}</p>
@@ -125,10 +125,10 @@ export default function AdminUsuariosSection({
                       type="button"
                       variant="secondary"
                       className="w-full sm:w-auto"
-                      onClick={() => void onDeleteUsuario(item.id)}
-                      disabled={!canDelete || isSubmittingUsuario}
+                      onClick={() => void onToggleUsuarioAtivo(item.id, item.ativo)}
+                      disabled={!canToggle || isSubmittingUsuario}
                     >
-                      {item.ativo ? "Inativar" : "Inativo"}
+                      {item.ativo ? "Inativar" : "Ativar"}
                     </Button>
                   )}
                 </div>

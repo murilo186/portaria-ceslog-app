@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 import { apiRequestWithSchema } from "./api";
 import { auditLogItemSchema, okResponseSchema, usuarioAdminListItemSchema } from "./contracts";
 import type { AuditLogItem, UsuarioAdminListItem, UsuarioCreateInput } from "../types/usuario";
@@ -21,6 +21,14 @@ export async function createUsuario(payload: UsuarioCreateInput, token: string):
 export async function deleteUsuario(usuarioId: number, token: string): Promise<void> {
   await apiRequestWithSchema(`/api/admin/usuarios/${usuarioId}`, okResponseSchema, {
     method: "DELETE",
+    token,
+  });
+}
+
+export async function updateUsuarioAtivo(usuarioId: number, ativo: boolean, token: string): Promise<void> {
+  await apiRequestWithSchema(`/api/admin/usuarios/${usuarioId}/ativo`, okResponseSchema, {
+    method: "PATCH",
+    body: { ativo },
     token,
   });
 }

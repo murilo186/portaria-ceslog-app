@@ -19,4 +19,8 @@ export const updateSenhaSchema = z.object({
   novaSenha: z.string().min(6, "Senha deve ter ao menos 6 caracteres").max(100, "Senha deve ter ate 100 caracteres"),
 });
 
+export const updateUsuarioAtivoSchema = z.object({
+  ativo: z.boolean(),
+});
+
 export type CreateUsuarioInput = z.infer<typeof createUsuarioSchema>;

@@ -40,6 +40,7 @@ export interface IUsuarioRepository {
   createOperador(data: Prisma.UsuarioUncheckedCreateInput): Promise<AdminUsuarioListItem>;
   findByIdForManagement(usuarioId: number): Promise<UsuarioManageItem | null>;
   deactivateById(usuarioId: number): Promise<void>;
+  activateById(usuarioId: number): Promise<void>;
   updateSenhaHash(usuarioId: number, senhaHash: string): Promise<void>;
 }
 
@@ -76,6 +77,13 @@ export const usuarioRepository: IUsuarioRepository = {
     await prisma.usuario.update({
       where: { id: usuarioId },
       data: { ativo: false },
+    });
+  },
+
+  async activateById(usuarioId: number) {
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { ativo: true },
     });
   },
 

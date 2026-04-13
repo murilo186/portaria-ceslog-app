@@ -3,12 +3,14 @@ import {
   createUsuarioService,
   deleteUsuarioService,
   listUsuariosService,
+  setUsuarioAtivoService,
   updateUsuarioSenhaService,
 } from "../services/usuarioService";
 import { getRequestMetadata } from "../utils/requestMetadata";
 import {
   createUsuarioSchema,
   deleteUsuarioParamsSchema,
+  updateUsuarioAtivoSchema,
   updateSenhaSchema,
 } from "../validation/usuarioSchemas";
 import { asyncHandler } from "./helpers/asyncHandler";
@@ -57,6 +59,29 @@ export const deleteUsuarioController = asyncHandler(async (req, res) => {
     entidade: "USUARIO",
     entidadeId: usuarioId,
     descricao: "Usuario operador inativado na area administrativa.",
+    contexto: getRequestMetadata(req),
+  });
+
+  return res.status(200).json(result);
+});
+
+export const updateUsuarioAtivoController = asyncHandler(async (req, res) => {
+  const currentUser = ensureAuthenticatedUser(req);
+  const { usuarioId } = deleteUsuarioParamsSchema.parse(req.params);
+  const { ativo } = updateUsuarioAtivoSchema.parse(req.body);
+
+  const result = await setUsuarioAtivoService(usuarioId, currentUser.id, ativo);
+
+  await createAuditLog({
+    usuarioId: currentUser.id,
+    usuarioNome: currentUser.nome,
+    usuarioLogin: currentUser.usuario,
+    acao: ativo ? "USUARIO_ATIVADO" : "USUARIO_INATIVADO",
+    entidade: "USUARIO",
+    entidadeId: usuarioId,
+    descricao: ativo
+      ? "Usuario operador ativado na area administrativa."
+      : "Usuario operador inativado na area administrativa.",
     contexto: getRequestMetadata(req),
   });
 
