@@ -1,5 +1,6 @@
 import Button from "../../../components/Button";
 import FeedbackMessage from "../../../components/FeedbackMessage";
+import Skeleton from "../../../components/Skeleton";
 import StatusBadge from "../../../components/StatusBadge";
 import { memo } from "react";
 import { formatDate } from "../hooks/useRegistroDetalhePage";
@@ -45,7 +46,7 @@ function RegistroDetalheHeader({
       </div>
 
       <h1 className="text-2xl font-semibold text-text-900">
-        {dataRelatorio ? `REGISTRO - ${formatDate(dataRelatorio)}` : "REGISTRO"}
+        {isLoading && !dataRelatorio ? <Skeleton className="h-7 w-56" /> : dataRelatorio ? `REGISTRO - ${formatDate(dataRelatorio)}` : "REGISTRO"}
       </h1>
       <p className="text-sm text-text-700">Tabela do registro selecionado.</p>
       {!isAdmin ? <p className="text-xs text-text-700">Somente administradores podem editar registros fechados.</p> : null}

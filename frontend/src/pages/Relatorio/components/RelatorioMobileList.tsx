@@ -1,6 +1,7 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import ListSkeleton from "../../../components/ListSkeleton";
 import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import type { RelatorioItem } from "../../../types/relatorio";
 
@@ -39,7 +40,7 @@ export default function RelatorioMobileList({
     <div className="space-y-3 md:hidden">
       {isLoading ? (
         <Card>
-          <p className="text-sm text-text-700">Carregando...</p>
+          <ListSkeleton rows={4} />
         </Card>
       ) : items.length === 0 ? (
         <Card>

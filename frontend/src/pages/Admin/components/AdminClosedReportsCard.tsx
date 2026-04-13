@@ -1,4 +1,5 @@
 import Card from "../../../components/Card";
+import ListSkeleton from "../../../components/ListSkeleton";
 import type { RelatorioResumo } from "../../../types/relatorio";
 import { formatDate } from "../helpers/adminFormatters";
 
@@ -18,7 +19,7 @@ export default function AdminClosedReportsCard({
       <h2 className="text-base font-semibold text-text-900">Últimos registros fechados</h2>
 
       {isLoadingRegistros ? (
-        <p className="text-sm text-text-700">Carregando lista...</p>
+        <ListSkeleton rows={5} />
       ) : reports.length === 0 ? (
         <p className="text-sm text-text-700">Ainda não há relatórios fechados.</p>
       ) : (

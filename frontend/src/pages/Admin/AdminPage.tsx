@@ -29,7 +29,7 @@ export default function AdminPage() {
   } = useAdminPage();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={isLoadingRegistros || isLoadingUsuarios || isLoadingLogs || isSubmittingUsuario}>
       <AdminPageHeader feedback={feedback} />
 
       <AdminRegistrosAccessCard onGoRegistros={handleGoRegistros} />

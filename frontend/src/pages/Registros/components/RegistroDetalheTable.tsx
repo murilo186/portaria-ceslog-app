@@ -1,6 +1,7 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import TableSkeleton from "../../../components/TableSkeleton";
 import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import { perfilPessoaLabel } from "../../../utils/perfilPessoa";
 import type { Relatorio } from "../../../types/relatorio";
@@ -75,7 +76,7 @@ function RegistroDetalheTable({
             {isLoading ? (
               <tr>
                 <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-text-700">
-                  Carregando...
+                  <TableSkeleton rows={6} columns={isAdmin ? 8 : 7} />
                 </td>
               </tr>
             ) : items.length === 0 ? (

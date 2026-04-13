@@ -1,5 +1,6 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
+import ListSkeleton from "../../../components/ListSkeleton";
 import type { AuditLogItem } from "../../../types/usuario";
 import {
   formatActionLabel,
@@ -34,7 +35,7 @@ export default function AdminAuditLogsCard({ isLoadingLogs, logs, onRefreshLogs 
       </div>
 
       {isLoadingLogs ? (
-        <p className="text-sm text-text-700">Carregando lista...</p>
+        <ListSkeleton rows={4} />
       ) : logs.length === 0 ? (
         <p className="text-sm text-text-700">Ainda não há eventos registrados.</p>
       ) : (

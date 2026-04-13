@@ -1,6 +1,7 @@
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import IconActionButton from "../../../components/IconActionButton";
+import TableSkeleton from "../../../components/TableSkeleton";
 import { useIncrementalRender } from "../../../hooks/useIncrementalRender";
 import type { RelatorioItem } from "../../../types/relatorio";
 
@@ -55,7 +56,7 @@ export default function RelatorioDesktopTable({
             {isLoading ? (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-sm text-text-700">
-                  Carregando...
+                  <TableSkeleton rows={6} columns={10} />
                 </td>
               </tr>
             ) : items.length === 0 ? (

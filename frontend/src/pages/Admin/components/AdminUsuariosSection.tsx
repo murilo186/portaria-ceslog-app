@@ -2,6 +2,7 @@ import type { FormEventHandler } from "react";
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import Input from "../../../components/Input";
+import ListSkeleton from "../../../components/ListSkeleton";
 import SelectField from "../../../components/SelectField";
 import type { TurnoUsuario, UsuarioAdminListItem } from "../../../types/usuario";
 
@@ -96,7 +97,7 @@ export default function AdminUsuariosSection({
         <h2 className="text-lg font-semibold text-text-900">Lista de usuários</h2>
 
         {isLoadingUsuarios ? (
-          <p className="text-sm text-text-700">Carregando...</p>
+          <ListSkeleton rows={5} />
         ) : usuarios.length === 0 ? (
           <p className="text-sm text-text-700">Nenhum usuário encontrado.</p>
         ) : (

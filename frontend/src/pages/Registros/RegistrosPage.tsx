@@ -2,6 +2,7 @@ import Button from "../../components/Button";
 import Card from "../../components/Card";
 import FeedbackMessage from "../../components/FeedbackMessage";
 import Input from "../../components/Input";
+import ListSkeleton from "../../components/ListSkeleton";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, useRegistrosPage } from "./hooks/useRegistrosPage";
 
@@ -24,7 +25,7 @@ export default function RegistrosPage() {
   } = useRegistrosPage();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={isLoading || isFetching}>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-text-900">Registros Fechados</h1>
         <p className="text-sm text-text-700">Filtre por data, placa ou nome para localizar relatorios.</p>
@@ -67,7 +68,9 @@ export default function RegistrosPage() {
       <Card className="p-0">
         <div className="divide-y divide-surface-200">
           {isLoading ? (
-            <p className="px-4 py-6 text-sm text-text-700">Carregando...</p>
+            <div className="px-4 py-4">
+              <ListSkeleton rows={6} />
+            </div>
           ) : registrosFechados.length === 0 ? (
             <p className="px-4 py-6 text-sm text-text-700">Nenhum registro fechado encontrado.</p>
           ) : (

@@ -39,7 +39,7 @@ export default function RelatorioPage() {
 
   return (
     <>
-      <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-6" aria-busy={isLoading || isSubmitting}>
         <RelatorioHeader
           showSimulationControls={showSimulationControls}
           isSubmitting={isSubmitting}

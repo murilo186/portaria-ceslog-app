@@ -1,6 +1,7 @@
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import FeedbackMessage from "../../components/FeedbackMessage";
+import Skeleton from "../../components/Skeleton";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, useDashboardPage } from "./hooks/useDashboardPage";
 
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   } = useDashboardPage();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={isLoadingStatus || isLoadingAction}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text-900">Painel do Operador</h1>
@@ -47,7 +48,10 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold text-text-900">Relatorio do dia</h2>
 
             {isLoadingStatus ? (
-              <p className="text-sm text-text-700">Carregando status...</p>
+              <div className="space-y-2 py-1">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-6 w-24" />
+              </div>
             ) : hasOpenReport && openReport ? (
               <>
                 <p className="text-sm text-text-700">Data: {formatDate(openReport.dataRelatorio)}</p>
