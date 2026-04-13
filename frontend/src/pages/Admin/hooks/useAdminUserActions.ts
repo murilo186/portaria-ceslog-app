@@ -14,11 +14,12 @@ type UseAdminUserActionsParams = {
   setFeedback: Dispatch<SetStateAction<Feedback | null>>;
 };
 
-const AUDIT_LOG_LIMIT = 20;
+const AUDIT_LOG_LIMIT = 100;
 
 export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseAdminUserActionsParams) {
   const queryClient = useQueryClient();
   const [novoUsuarioForm, setNovoUsuarioForm] = useState<NovoUsuarioForm>(initialNovoUsuarioForm);
+  const [pendingUsuarioId, setPendingUsuarioId] = useState<number | null>(null);
 
   const createUsuarioMutation = useMutation({
     mutationFn: ({ token, payload }: { token: string; payload: { nome: string; usuario: string; senha: string; turno: "MANHA" | "TARDE" } }) =>
@@ -82,17 +83,8 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
       return;
     }
 
-    const shouldProceed = window.confirm(
-      ativoAtual
-        ? "Confirma inativar este operador? Ele nao conseguira mais logar."
-        : "Confirma ativar este operador novamente?",
-    );
-
-    if (!shouldProceed) {
-      return;
-    }
-
     setFeedback(null);
+    setPendingUsuarioId(usuarioId);
 
     try {
       await updateUsuarioAtivoMutation.mutateAsync({ token: auth.token, usuarioId, ativo: !ativoAtual });
@@ -112,11 +104,16 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
       await invalidateAdminQueries(auth.usuario.id);
     } catch (error) {
       setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel atualizar status do usuario.") });
+    } finally {
+      setPendingUsuarioId(null);
     }
   };
 
   return {
     isSubmittingUsuario: createUsuarioMutation.isPending || updateUsuarioAtivoMutation.isPending,
+    isCreatingUsuario: createUsuarioMutation.isPending,
+    isUpdatingUsuarioAtivo: updateUsuarioAtivoMutation.isPending,
+    pendingUsuarioId,
     novoUsuarioForm,
     setNovoUsuarioForm,
     handleCreateUsuario,

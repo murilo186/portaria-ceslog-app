@@ -12,6 +12,9 @@ export default function AdminPage() {
     isLoadingUsuarios,
     isLoadingLogs,
     isSubmittingUsuario,
+    isCreatingUsuario,
+    isUpdatingUsuarioAtivo,
+    pendingUsuarioId,
     feedback,
     latestClosedReports,
     usuarios,
@@ -37,7 +40,9 @@ export default function AdminPage() {
       <AdminUsuariosSection
         authUserId={auth?.usuario.id ?? null}
         isLoadingUsuarios={isLoadingUsuarios}
-        isSubmittingUsuario={isSubmittingUsuario}
+        isCreatingUsuario={isCreatingUsuario}
+        isUpdatingUsuarioAtivo={isUpdatingUsuarioAtivo}
+        pendingUsuarioId={pendingUsuarioId}
         usuarios={usuarios}
         novoUsuarioForm={novoUsuarioForm}
         onChangeNome={handleChangeNovoUsuarioNome}

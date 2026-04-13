@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { listRelatoriosFechados } from "../../../services/relatorioService";
 import { getUserErrorMessage } from "../../../services/errorService";
@@ -16,7 +16,7 @@ type UseAdminDataParams = {
   setFeedback: Dispatch<SetStateAction<Feedback | null>>;
 };
 
-const AUDIT_LOG_LIMIT = 20;
+const AUDIT_LOG_LIMIT = 100;
 const ADMIN_CLOSED_REPORTS_PAGE_SIZE = 5;
 
 export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFeedback }: UseAdminDataParams) {

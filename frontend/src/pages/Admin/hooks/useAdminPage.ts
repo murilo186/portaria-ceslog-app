@@ -48,7 +48,16 @@ export function useAdminPage() {
     await refetchLogs();
   };
 
-  const { isSubmittingUsuario, novoUsuarioForm, setNovoUsuarioForm, handleCreateUsuario, handleToggleUsuarioAtivo } =
+  const {
+    isSubmittingUsuario,
+    isCreatingUsuario,
+    isUpdatingUsuarioAtivo,
+    pendingUsuarioId,
+    novoUsuarioForm,
+    setNovoUsuarioForm,
+    handleCreateUsuario,
+    handleToggleUsuarioAtivo,
+  } =
     useAdminUserActions({
       auth,
       navigateToLogin,
@@ -97,6 +106,9 @@ export function useAdminPage() {
     isLoadingUsuarios,
     isLoadingLogs,
     isSubmittingUsuario,
+    isCreatingUsuario,
+    isUpdatingUsuarioAtivo,
+    pendingUsuarioId,
     feedback,
     latestClosedReports,
     usuarios,
