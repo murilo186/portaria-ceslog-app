@@ -46,6 +46,7 @@ describe("loginService", () => {
   it("retorna token e usuário quando credenciais são válidas", async () => {
     findFirstMock.mockResolvedValue({
       id: 10,
+      tenantId: 1,
       nome: "Operador",
       usuario: "operador",
       email: "operador@ceslog.local",
@@ -53,6 +54,12 @@ describe("loginService", () => {
       perfil: "OPERADOR",
       turno: "MANHA",
       ativo: true,
+      tenant: {
+        id: 1,
+        slug: "ceslog",
+        nome: "CESLOG",
+        ativo: true,
+      },
     });
     compareMock.mockResolvedValue(true);
     createOrReplaceUserSessionMock.mockResolvedValue("session.mock");
@@ -75,6 +82,10 @@ describe("loginService", () => {
       id: 10,
       nome: "Operador",
       perfil: "OPERADOR",
+      tenant: {
+        id: 1,
+        slug: "ceslog",
+      },
     });
   });
 });

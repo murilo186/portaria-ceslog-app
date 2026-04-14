@@ -10,9 +10,9 @@ export type RelatorioLifecycleServiceApi = Pick<
 >;
 
 export function createRelatorioLifecycleService({ repository, runtime }: RelatorioServiceContext): RelatorioLifecycleServiceApi {
-  async function createOpenReport() {
+  async function createOpenReport(tenantId: number) {
     try {
-      return await repository.createOpenReportWithItems(runtime.clock.getCurrentDate());
+      return await repository.createOpenReportWithItems(tenantId, runtime.clock.getCurrentDate());
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw RELATORIO_ERROR.dailyReportAlreadyExists();
@@ -22,8 +22,8 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
     }
   }
 
-  async function getOpenReportService() {
-    const cached = runtime.cache.getOpenReportCache();
+  async function getOpenReportService(tenantId: number) {
+    const cached = runtime.cache.getOpenReportCache(tenantId);
 
     if (
       cached &&
@@ -34,45 +34,45 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
     }
 
     await runtime.staleReports.closeStaleOpenReports(repository);
-    const openReport = await repository.findOpenReportWithItems();
+    const openReport = await repository.findOpenReportWithItems(tenantId);
 
     if (openReport) {
-      runtime.cache.setOpenReportCache(openReport);
+      runtime.cache.setOpenReportCache(tenantId, openReport);
       return toRelatorioResponse(openReport);
     }
 
     return openReport;
   }
 
-  async function createNewReportService() {
+  async function createNewReportService(tenantId: number) {
     await runtime.staleReports.closeStaleOpenReports(repository);
 
-    const report = await repository.findOpenReportWithItems();
+    const report = await repository.findOpenReportWithItems(tenantId);
 
     if (report) {
       throw RELATORIO_ERROR.openReportExists();
     }
 
-    const created = await createOpenReport();
-    runtime.cache.invalidateRelatorioReadCaches(created.id);
+    const created = await createOpenReport(tenantId);
+    runtime.cache.invalidateRelatorioReadCaches(tenantId, created.id);
 
     return toRelatorioResponse(created);
   }
 
-  async function getTodayReportService() {
-    const report = await getOpenReportService();
+  async function getTodayReportService(tenantId: number) {
+    const report = await getOpenReportService(tenantId);
 
     if (report) {
       return report;
     }
 
     try {
-      const created = await createOpenReport();
-      runtime.cache.invalidateRelatorioReadCaches(created.id);
+      const created = await createOpenReport(tenantId);
+      runtime.cache.invalidateRelatorioReadCaches(tenantId, created.id);
       return toRelatorioResponse(created);
     } catch (error) {
       if (error instanceof AppError && error.code === "DAILY_REPORT_ALREADY_EXISTS") {
-        const currentOpenReport = await repository.findOpenReportWithItems();
+        const currentOpenReport = await repository.findOpenReportWithItems(tenantId);
 
         if (currentOpenReport) {
           return toRelatorioResponse(currentOpenReport);
@@ -83,8 +83,8 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
     }
   }
 
-  async function closeRelatorioService(relatorioId: number) {
-    const relatorio = await repository.findReportById(relatorioId);
+  async function closeRelatorioService(tenantId: number, relatorioId: number) {
+    const relatorio = await repository.findReportById(tenantId, relatorioId);
 
     if (!relatorio) {
       throw RELATORIO_ERROR.reportNotFound();
@@ -99,8 +99,8 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
       };
     }
 
-    const closed = await repository.updateRelatorioAsClosed(relatorio.id, runtime.clock.getCurrentDate());
-    runtime.cache.invalidateRelatorioReadCaches(relatorio.id);
+    const closed = await repository.updateRelatorioAsClosed(tenantId, relatorio.id, runtime.clock.getCurrentDate());
+    runtime.cache.invalidateRelatorioReadCaches(tenantId, relatorio.id);
     return {
       ...closed,
       dataRelatorio: closed.dataRelatorio.toISOString(),

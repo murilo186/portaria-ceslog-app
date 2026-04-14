@@ -16,17 +16,19 @@ import {
 import { asyncHandler } from "./helpers/asyncHandler";
 import { ensureAuthenticatedUser } from "./helpers/ensureAuthenticatedUser";
 
-export const listUsuariosController = asyncHandler(async (_req, res) => {
-  const usuarios = await listUsuariosService();
+export const listUsuariosController = asyncHandler(async (req, res) => {
+  const currentUser = ensureAuthenticatedUser(req);
+  const usuarios = await listUsuariosService(currentUser.tenantId);
   return res.status(200).json(usuarios);
 });
 
 export const createUsuarioController = asyncHandler(async (req, res) => {
   const currentUser = ensureAuthenticatedUser(req);
   const payload = createUsuarioSchema.parse(req.body);
-  const usuario = await createUsuarioService(payload);
+  const usuario = await createUsuarioService(payload, currentUser.tenantId);
 
   await createAuditLog({
+    tenantId: currentUser.tenantId,
     usuarioId: currentUser.id,
     usuarioNome: currentUser.nome,
     usuarioLogin: currentUser.usuario,
@@ -49,9 +51,10 @@ export const deleteUsuarioController = asyncHandler(async (req, res) => {
   const currentUser = ensureAuthenticatedUser(req);
   const { usuarioId } = deleteUsuarioParamsSchema.parse(req.params);
 
-  const result = await deleteUsuarioService(usuarioId, currentUser.id);
+  const result = await deleteUsuarioService(usuarioId, currentUser.id, currentUser.tenantId);
 
   await createAuditLog({
+    tenantId: currentUser.tenantId,
     usuarioId: currentUser.id,
     usuarioNome: currentUser.nome,
     usuarioLogin: currentUser.usuario,
@@ -70,9 +73,10 @@ export const updateUsuarioAtivoController = asyncHandler(async (req, res) => {
   const { usuarioId } = deleteUsuarioParamsSchema.parse(req.params);
   const { ativo } = updateUsuarioAtivoSchema.parse(req.body);
 
-  const result = await setUsuarioAtivoService(usuarioId, currentUser.id, ativo);
+  const result = await setUsuarioAtivoService(usuarioId, currentUser.id, currentUser.tenantId, ativo);
 
   await createAuditLog({
+    tenantId: currentUser.tenantId,
     usuarioId: currentUser.id,
     usuarioNome: currentUser.nome,
     usuarioLogin: currentUser.usuario,
@@ -93,9 +97,10 @@ export const updateUsuarioSenhaController = asyncHandler(async (req, res) => {
   const { usuarioId } = deleteUsuarioParamsSchema.parse(req.params);
   const { novaSenha } = updateSenhaSchema.parse(req.body);
 
-  const result = await updateUsuarioSenhaService(usuarioId, currentUser.id, novaSenha);
+  const result = await updateUsuarioSenhaService(usuarioId, currentUser.id, currentUser.tenantId, novaSenha);
 
   await createAuditLog({
+    tenantId: currentUser.tenantId,
     usuarioId: currentUser.id,
     usuarioNome: currentUser.nome,
     usuarioLogin: currentUser.usuario,

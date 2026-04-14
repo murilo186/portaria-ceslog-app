@@ -37,12 +37,13 @@ export type RelatorioItemUpdateResult = Awaited<ReturnType<IRelatorioRepository[
 };
 
 export type RelatorioServiceApi = {
-  getOpenReportService(): Promise<RelatorioResponse | null>;
-  createNewReportService(): Promise<RelatorioResponse>;
-  getTodayReportService(): Promise<RelatorioResponse>;
-  listReportsService(): Promise<RelatorioResumoResponse[]>;
-  listClosedReportsService(query: ClosedReportsQuery): Promise<ClosedReportsResponse>;
+  getOpenReportService(tenantId: number): Promise<RelatorioResponse | null>;
+  createNewReportService(tenantId: number): Promise<RelatorioResponse>;
+  getTodayReportService(tenantId: number): Promise<RelatorioResponse>;
+  listReportsService(tenantId: number): Promise<RelatorioResumoResponse[]>;
+  listClosedReportsService(tenantId: number, query: ClosedReportsQuery): Promise<ClosedReportsResponse>;
   getReportByIdService(
+    tenantId: number,
     relatorioId: number,
     query?: ReportItemsCursorQuery,
   ): Promise<
@@ -66,7 +67,7 @@ export type RelatorioServiceApi = {
     user: AuthenticatedUser,
   ): Promise<RelatorioItemUpdateResult>;
   deleteRelatorioItemService(relatorioId: number, itemId: number, user: AuthenticatedUser): Promise<{ ok: true }>;
-  closeRelatorioService(relatorioId: number): Promise<{
+  closeRelatorioService(tenantId: number, relatorioId: number): Promise<{
     id: number;
     status: "ABERTO" | "FECHADO";
     dataRelatorio: string;

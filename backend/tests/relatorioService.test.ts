@@ -9,7 +9,7 @@ const relatorioCountMock = vi.fn();
 const relatorioFindManyMock = vi.fn();
 
 const relatorioItemCreateMock = vi.fn();
-const relatorioItemFindUniqueMock = vi.fn();
+const relatorioItemFindFirstMock = vi.fn();
 const relatorioItemUpdateMock = vi.fn();
 const relatorioItemDeleteMock = vi.fn();
 
@@ -28,7 +28,7 @@ vi.mock("../src/lib/prisma", () => ({
     },
     relatorioItem: {
       create: (...args: unknown[]) => relatorioItemCreateMock(...args),
-      findUnique: (...args: unknown[]) => relatorioItemFindUniqueMock(...args),
+      findFirst: (...args: unknown[]) => relatorioItemFindFirstMock(...args),
       update: (...args: unknown[]) => relatorioItemUpdateMock(...args),
       delete: (...args: unknown[]) => relatorioItemDeleteMock(...args),
     },
@@ -44,6 +44,9 @@ import {
 
 const operador = {
   id: 1,
+  tenantId: 1,
+  tenantSlug: "ceslog",
+  tenantNome: "CESLOG",
   perfil: "OPERADOR",
   nome: "Operador",
   usuario: "operador.manha",
@@ -51,21 +54,24 @@ const operador = {
   turno: "MANHA",
 } as const;
 
-describe("relatorioService regras críticas", () => {
+describe("relatorioService regras criticas", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     relatorioFindManyMock.mockResolvedValue([]);
   });
 
-  it("retorna relatório aberto atual quando existir", async () => {
+  it("retorna relatorio aberto atual quando existir", async () => {
     findFirstMock.mockResolvedValue({
       id: 5,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-06T10:30:00.000Z"),
+      criadoEm: new Date("2026-04-06T10:30:00.000Z"),
+      finalizadoEm: null,
       status: "ABERTO",
       itens: [],
     });
 
-    const report = await getTodayReportService();
+    const report = await getTodayReportService(1);
 
     expect(relatorioFindManyMock).toHaveBeenCalledTimes(1);
     expect(findFirstMock).toHaveBeenCalledTimes(1);
@@ -73,16 +79,22 @@ describe("relatorioService regras críticas", () => {
     expect(report.id).toBe(5);
   });
 
-  it("cria novo relatório quando não existe nenhum aberto", async () => {
-    findFirstMock.mockResolvedValue(null);
+  it("cria novo relatorio quando nao existe nenhum aberto", async () => {
+    findFirstMock
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+
     createMock.mockResolvedValue({
       id: 5,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-06T11:00:00.000Z"),
+      criadoEm: new Date("2026-04-06T11:00:00.000Z"),
+      finalizadoEm: null,
       status: "ABERTO",
       itens: [],
     });
 
-    const report = await getTodayReportService();
+    const report = await getTodayReportService(1);
 
     expect(relatorioFindManyMock).toHaveBeenCalledTimes(1);
     expect(findFirstMock).toHaveBeenCalledTimes(1);
@@ -90,10 +102,16 @@ describe("relatorioService regras críticas", () => {
     expect(report.id).toBe(5);
   });
 
-  it("bloqueia criação de item em relatório fechado", async () => {
-    relatorioFindUniqueMock.mockResolvedValue({
-      id: 9,
-      status: "FECHADO",
+  it("bloqueia criacao de item em relatorio fechado", async () => {
+    findFirstMock.mockImplementation((args?: { where?: Record<string, unknown>; select?: Record<string, unknown> }) => {
+      if (args?.select?.status) {
+        return Promise.resolve({
+          id: 9,
+          status: "FECHADO",
+        });
+      }
+
+      return Promise.resolve(null);
     });
 
     await expect(
@@ -103,7 +121,7 @@ describe("relatorioService regras críticas", () => {
           perfilPessoa: "VISITANTE",
           empresa: "CESLOG",
           placaVeiculo: "ABC1D23",
-          nome: "João",
+          nome: "Joao",
           horaEntrada: "08:00",
           observacoes: "Teste",
         },
@@ -115,11 +133,12 @@ describe("relatorioService regras críticas", () => {
     });
   });
 
-  it("sanitiza campos textuais para reduzir risco de XSS armazenado", async () => {
-    relatorioFindUniqueMock.mockResolvedValue({
+  it("sanitiza campos textuais para reduzir risco de xss armazenado", async () => {
+    findFirstMock.mockResolvedValue({
       id: 11,
       status: "ABERTO",
     });
+
     relatorioItemCreateMock.mockResolvedValue({
       id: 30,
       relatorioId: 11,
@@ -154,8 +173,8 @@ describe("relatorioService regras críticas", () => {
     expect(payload.placaVeiculo).toBe("ABC1D23");
   });
 
-  it("bloqueia edição por usuário que não é autor nem admin", async () => {
-    relatorioItemFindUniqueMock.mockResolvedValue({
+  it("bloqueia edicao por usuario que nao e autor nem admin", async () => {
+    relatorioItemFindFirstMock.mockResolvedValue({
       id: 20,
       relatorioId: 9,
       usuarioId: 2,
@@ -186,8 +205,8 @@ describe("relatorioService regras críticas", () => {
     });
   });
 
-  it("bloqueia edição quando relatório já está fechado", async () => {
-    relatorioItemFindUniqueMock.mockResolvedValue({
+  it("bloqueia edicao quando relatorio ja esta fechado", async () => {
+    relatorioItemFindFirstMock.mockResolvedValue({
       id: 21,
       relatorioId: 10,
       usuarioId: 1,

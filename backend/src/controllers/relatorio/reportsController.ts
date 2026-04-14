@@ -1,4 +1,4 @@
-import { createAuditLog } from "../../services/auditService";
+﻿import { createAuditLog } from "../../services/auditService";
 import {
   closeRelatorioService,
   createNewReportService,
@@ -18,14 +18,14 @@ import { asyncHandler } from "../helpers/asyncHandler";
 import { ensureAuthenticatedUser } from "../helpers/ensureAuthenticatedUser";
 
 export const getTodayReportController = asyncHandler(async (req, res) => {
-  ensureAuthenticatedUser(req);
-  const report = await getTodayReportService();
+  const user = ensureAuthenticatedUser(req);
+  const report = await getTodayReportService(user.tenantId);
   return res.status(200).json(report);
 });
 
 export const getOpenReportController = asyncHandler(async (req, res) => {
-  ensureAuthenticatedUser(req);
-  const report = await getOpenReportService();
+  const user = ensureAuthenticatedUser(req);
+  const report = await getOpenReportService(user.tenantId);
 
   if (!report) {
     return res.status(404).json({
@@ -39,16 +39,18 @@ export const getOpenReportController = asyncHandler(async (req, res) => {
 
 export const createNewReportController = asyncHandler(async (req, res) => {
   const user = ensureAuthenticatedUser(req);
-  const report = await createNewReportService();
+  const report = await createNewReportService(user.tenantId);
   const requestMeta = getRequestMetadata(req);
 
   console.info("relatorio_created", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId: report.id,
   });
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,
@@ -67,15 +69,15 @@ export const createNewReportController = asyncHandler(async (req, res) => {
 });
 
 export const listReportsController = asyncHandler(async (req, res) => {
-  ensureAuthenticatedUser(req);
-  const reports = await listReportsService();
+  const user = ensureAuthenticatedUser(req);
+  const reports = await listReportsService(user.tenantId);
   return res.status(200).json(reports);
 });
 
 export const listClosedReportsController = asyncHandler(async (req, res) => {
-  ensureAuthenticatedUser(req);
+  const user = ensureAuthenticatedUser(req);
   const query = closedReportsQuerySchema.parse(req.query);
-  const result = await listClosedReportsService(query);
+  const result = await listClosedReportsService(user.tenantId, query);
 
   return res.status(200).json(result);
 });
@@ -96,12 +98,13 @@ export const getReportByIdController = asyncHandler(async (req, res) => {
   console.info("relatorio_detail_requested", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId,
     itemCursor: cursorQuery?.itemCursor ?? null,
     itemLimit: cursorQuery?.itemLimit ?? null,
   });
 
-  const report = await getReportByIdService(relatorioId, cursorQuery);
+  const report = await getReportByIdService(user.tenantId, relatorioId, cursorQuery);
   return res.status(200).json(report);
 });
 
@@ -109,16 +112,18 @@ export const closeRelatorioController = asyncHandler(async (req, res) => {
   const user = ensureAuthenticatedUser(req);
   const { relatorioId } = relatorioIdSchema.parse(req.params);
 
-  const relatorio = await closeRelatorioService(relatorioId);
+  const relatorio = await closeRelatorioService(user.tenantId, relatorioId);
   const requestMeta = getRequestMetadata(req);
 
   console.info("relatorio_closed", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId: relatorio.id,
   });
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,

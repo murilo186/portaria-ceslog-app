@@ -90,21 +90,31 @@ export type RelatorioCleanupCandidate = {
 export interface IRelatorioRepository {
   findOpenReportsForCleanup(): Promise<RelatorioCleanupCandidate[]>;
   closeReportsByIds(reportIds: number[], finalizadoEm: Date): Promise<void>;
-  findOpenReportWithItems(): Promise<RelatorioComItens | null>;
-  createOpenReportWithItems(dataRelatorio: Date): Promise<RelatorioComItens>;
-  listReportSummaries(): Promise<RelatorioResumo[]>;
-  countClosedReports(where: Prisma.RelatorioWhereInput): Promise<number>;
-  listClosedReports(where: Prisma.RelatorioWhereInput, page: number, pageSize: number): Promise<RelatorioResumo[]>;
-  findReportByIdWithItems(relatorioId: number): Promise<RelatorioComItens | null>;
-  findReportByIdWithoutItems(relatorioId: number): Promise<RelatorioBase | null>;
-  listReportItemsByCursor(relatorioId: number, itemCursor: number | undefined, itemLimit: number): Promise<RelatorioItemComUsuario[]>;
-  findReportById(relatorioId: number): Promise<Prisma.RelatorioGetPayload<object> | null>;
-  findReportStatusById(relatorioId: number): Promise<RelatorioStatusMinimo | null>;
+  findOpenReportWithItems(tenantId: number): Promise<RelatorioComItens | null>;
+  createOpenReportWithItems(tenantId: number, dataRelatorio: Date): Promise<RelatorioComItens>;
+  listReportSummaries(tenantId: number): Promise<RelatorioResumo[]>;
+  countClosedReports(tenantId: number, where: Prisma.RelatorioWhereInput): Promise<number>;
+  listClosedReports(
+    tenantId: number,
+    where: Prisma.RelatorioWhereInput,
+    page: number,
+    pageSize: number,
+  ): Promise<RelatorioResumo[]>;
+  findReportByIdWithItems(tenantId: number, relatorioId: number): Promise<RelatorioComItens | null>;
+  findReportByIdWithoutItems(tenantId: number, relatorioId: number): Promise<RelatorioBase | null>;
+  listReportItemsByCursor(
+    tenantId: number,
+    relatorioId: number,
+    itemCursor: number | undefined,
+    itemLimit: number,
+  ): Promise<RelatorioItemComUsuario[]>;
+  findReportById(tenantId: number, relatorioId: number): Promise<Prisma.RelatorioGetPayload<object> | null>;
+  findReportStatusById(tenantId: number, relatorioId: number): Promise<RelatorioStatusMinimo | null>;
   createRelatorioItem(data: Prisma.RelatorioItemUncheckedCreateInput): Promise<Prisma.RelatorioItemGetPayload<object>>;
-  findManagedItem(itemId: number): Promise<RelatorioItemGerenciado | null>;
+  findManagedItem(tenantId: number, itemId: number): Promise<RelatorioItemGerenciado | null>;
   updateRelatorioItem(itemId: number, data: Prisma.RelatorioItemUncheckedUpdateInput): Promise<Prisma.RelatorioItemGetPayload<object>>;
   deleteRelatorioItemById(itemId: number): Promise<void>;
-  updateRelatorioAsClosed(relatorioId: number, finalizadoEm: Date): Promise<Prisma.RelatorioGetPayload<object>>;
+  updateRelatorioAsClosed(tenantId: number, relatorioId: number, finalizadoEm: Date): Promise<Prisma.RelatorioGetPayload<object>>;
 }
 
 export const relatorioRepository: IRelatorioRepository = {
@@ -136,9 +146,10 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async findOpenReportWithItems() {
+  async findOpenReportWithItems(tenantId: number) {
     return prisma.relatorio.findFirst({
       where: {
+        tenantId,
         status: "ABERTO",
       },
       orderBy: {
@@ -148,9 +159,10 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async createOpenReportWithItems(dataRelatorio: Date) {
+  async createOpenReportWithItems(tenantId: number, dataRelatorio: Date) {
     return prisma.relatorio.create({
       data: {
+        tenantId,
         dataRelatorio,
         status: "ABERTO",
       },
@@ -158,20 +170,29 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async listReportSummaries() {
+  async listReportSummaries(tenantId: number) {
     return prisma.relatorio.findMany({
+      where: { tenantId },
       select: relatorioSummarySelect,
       orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
     });
   },
 
-  async countClosedReports(where: Prisma.RelatorioWhereInput) {
-    return prisma.relatorio.count({ where });
+  async countClosedReports(tenantId: number, where: Prisma.RelatorioWhereInput) {
+    return prisma.relatorio.count({
+      where: {
+        tenantId,
+        ...where,
+      },
+    });
   },
 
-  async listClosedReports(where: Prisma.RelatorioWhereInput, page: number, pageSize: number) {
+  async listClosedReports(tenantId: number, where: Prisma.RelatorioWhereInput, page: number, pageSize: number) {
     return prisma.relatorio.findMany({
-      where,
+      where: {
+        tenantId,
+        ...where,
+      },
       select: relatorioSummarySelect,
       orderBy: [{ dataRelatorio: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
@@ -179,23 +200,30 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async findReportByIdWithItems(relatorioId: number) {
-    return prisma.relatorio.findUnique({
-      where: { id: relatorioId },
+  async findReportByIdWithItems(tenantId: number, relatorioId: number) {
+    return prisma.relatorio.findFirst({
+      where: {
+        tenantId,
+        id: relatorioId,
+      },
       include: relatorioWithItensInclude,
     });
   },
 
-  async findReportByIdWithoutItems(relatorioId: number) {
-    return prisma.relatorio.findUnique({
-      where: { id: relatorioId },
+  async findReportByIdWithoutItems(tenantId: number, relatorioId: number) {
+    return prisma.relatorio.findFirst({
+      where: {
+        tenantId,
+        id: relatorioId,
+      },
       select: relatorioBaseSelect,
     });
   },
 
-  async listReportItemsByCursor(relatorioId: number, itemCursor: number | undefined, itemLimit: number) {
+  async listReportItemsByCursor(tenantId: number, relatorioId: number, itemCursor: number | undefined, itemLimit: number) {
     return prisma.relatorioItem.findMany({
       where: {
+        tenantId,
         relatorioId,
         ...(itemCursor ? { id: { lt: itemCursor } } : {}),
       },
@@ -207,15 +235,21 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async findReportById(relatorioId: number) {
-    return prisma.relatorio.findUnique({
-      where: { id: relatorioId },
+  async findReportById(tenantId: number, relatorioId: number) {
+    return prisma.relatorio.findFirst({
+      where: {
+        tenantId,
+        id: relatorioId,
+      },
     });
   },
 
-  async findReportStatusById(relatorioId: number) {
-    return prisma.relatorio.findUnique({
-      where: { id: relatorioId },
+  async findReportStatusById(tenantId: number, relatorioId: number) {
+    return prisma.relatorio.findFirst({
+      where: {
+        tenantId,
+        id: relatorioId,
+      },
       select: {
         id: true,
         status: true,
@@ -229,9 +263,12 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async findManagedItem(itemId: number) {
-    return prisma.relatorioItem.findUnique({
-      where: { id: itemId },
+  async findManagedItem(tenantId: number, itemId: number) {
+    return prisma.relatorioItem.findFirst({
+      where: {
+        tenantId,
+        id: itemId,
+      },
       include: managedItemInclude,
     });
   },
@@ -249,12 +286,26 @@ export const relatorioRepository: IRelatorioRepository = {
     });
   },
 
-  async updateRelatorioAsClosed(relatorioId: number, finalizadoEm: Date) {
-    return prisma.relatorio.update({
-      where: { id: relatorioId },
+  async updateRelatorioAsClosed(tenantId: number, relatorioId: number, finalizadoEm: Date) {
+    const closed = await prisma.relatorio.updateMany({
+      where: {
+        tenantId,
+        id: relatorioId,
+      },
       data: {
         status: "FECHADO",
         finalizadoEm,
+      },
+    });
+
+    if (closed.count === 0) {
+      throw new Error("REPORT_NOT_FOUND_OR_NOT_OWNED");
+    }
+
+    return prisma.relatorio.findFirstOrThrow({
+      where: {
+        tenantId,
+        id: relatorioId,
       },
     });
   },

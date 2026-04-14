@@ -26,54 +26,65 @@ function buildClosedReportsCacheKey(query: ClosedReportsQuery) {
   return `${CLOSED_REPORTS_CACHE_PREFIX}${query.page}:${query.pageSize}:${data}:${busca}`;
 }
 
-function buildReportDetailCacheKey(relatorioId: number) {
-  return `${REPORT_DETAIL_CACHE_PREFIX}${relatorioId}`;
+function buildReportDetailCacheKey(tenantId: number, relatorioId: number) {
+  return `${REPORT_DETAIL_CACHE_PREFIX}${tenantId}:${relatorioId}`;
 }
 
-export function getOpenReportCache() {
-  return getCachedValue<RelatorioComItens>(OPEN_REPORT_CACHE_KEY);
+function buildOpenReportCacheKey(tenantId: number) {
+  return `${OPEN_REPORT_CACHE_KEY}:${tenantId}`;
 }
 
-export function setOpenReportCache(report: RelatorioComItens) {
-  setCachedValue(OPEN_REPORT_CACHE_KEY, report, OPEN_REPORT_CACHE_TTL_MS);
+export function getOpenReportCache(tenantId: number) {
+  return getCachedValue<RelatorioComItens>(buildOpenReportCacheKey(tenantId));
 }
 
-export function getClosedReportsCache(query: ClosedReportsQuery) {
-  const cacheKey = buildClosedReportsCacheKey(query);
+export function setOpenReportCache(tenantId: number, report: RelatorioComItens) {
+  setCachedValue(buildOpenReportCacheKey(tenantId), report, OPEN_REPORT_CACHE_TTL_MS);
+}
+
+export function getClosedReportsCache(tenantId: number, query: ClosedReportsQuery) {
+  const cacheKey = `${tenantId}:${buildClosedReportsCacheKey(query)}`;
   return getCachedValue<ClosedReportsResponse>(cacheKey);
 }
 
-export function setClosedReportsCache(query: ClosedReportsQuery, payload: ClosedReportsResponse) {
-  const cacheKey = buildClosedReportsCacheKey(query);
+export function setClosedReportsCache(tenantId: number, query: ClosedReportsQuery, payload: ClosedReportsResponse) {
+  const cacheKey = `${tenantId}:${buildClosedReportsCacheKey(query)}`;
   setCachedValue(cacheKey, payload, CLOSED_REPORTS_CACHE_TTL_MS);
 }
 
-export function getReportDetailCache(relatorioId: number) {
-  const cacheKey = buildReportDetailCacheKey(relatorioId);
+export function getReportDetailCache(tenantId: number, relatorioId: number) {
+  const cacheKey = buildReportDetailCacheKey(tenantId, relatorioId);
   return getCachedValue<RelatorioComItens>(cacheKey);
 }
 
-export function setReportDetailCache(relatorioId: number, report: RelatorioComItens) {
-  const cacheKey = buildReportDetailCacheKey(relatorioId);
+export function setReportDetailCache(tenantId: number, relatorioId: number, report: RelatorioComItens) {
+  const cacheKey = buildReportDetailCacheKey(tenantId, relatorioId);
   setCachedValue(cacheKey, report, REPORT_DETAIL_CACHE_TTL_MS);
 }
 
-function invalidateClosedReportsCache() {
-  clearCacheByPrefix(CLOSED_REPORTS_CACHE_PREFIX);
+function invalidateClosedReportsCache(tenantId: number) {
+  clearCacheByPrefix(`${tenantId}:${CLOSED_REPORTS_CACHE_PREFIX}`);
 }
 
-function invalidateReportDetailCache(relatorioId: number) {
-  clearCacheByPrefix(buildReportDetailCacheKey(relatorioId));
+function invalidateReportDetailCache(tenantId: number, relatorioId: number) {
+  clearCacheByPrefix(buildReportDetailCacheKey(tenantId, relatorioId));
 }
 
-export function invalidateRelatorioReadCaches(relatorioId?: number) {
-  invalidateClosedReportsCache();
-  clearCacheByPrefix(OPEN_REPORT_CACHE_KEY);
-
-  if (typeof relatorioId === "number") {
-    invalidateReportDetailCache(relatorioId);
+export function invalidateRelatorioReadCaches(tenantId?: number, relatorioId?: number) {
+  if (typeof tenantId !== "number") {
+    clearCacheByPrefix(CLOSED_REPORTS_CACHE_PREFIX);
+    clearCacheByPrefix(OPEN_REPORT_CACHE_KEY);
+    clearCacheByPrefix(REPORT_DETAIL_CACHE_PREFIX);
     return;
   }
 
-  clearCacheByPrefix(REPORT_DETAIL_CACHE_PREFIX);
+  invalidateClosedReportsCache(tenantId);
+  clearCacheByPrefix(buildOpenReportCacheKey(tenantId));
+
+  if (typeof relatorioId === "number") {
+    invalidateReportDetailCache(tenantId, relatorioId);
+    return;
+  }
+
+  clearCacheByPrefix(`${REPORT_DETAIL_CACHE_PREFIX}${tenantId}:`);
 }

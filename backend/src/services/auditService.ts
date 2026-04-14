@@ -8,6 +8,7 @@ export type AuditRequestContext = {
 };
 
 export type CreateAuditLogInput = {
+  tenantId: number;
   usuarioId?: number | null;
   usuarioNome?: string | null;
   usuarioLogin?: string | null;
@@ -23,6 +24,7 @@ export async function createAuditLog(input: CreateAuditLogInput) {
   try {
     await prisma.auditLog.create({
       data: {
+        tenantId: input.tenantId,
         usuarioId: input.usuarioId ?? null,
         usuarioNome: input.usuarioNome ?? null,
         usuarioLogin: input.usuarioLogin ?? null,
@@ -41,8 +43,11 @@ export async function createAuditLog(input: CreateAuditLogInput) {
   }
 }
 
-export async function listAuditLogsService(limit: number) {
+export async function listAuditLogsService(limit: number, tenantId: number) {
   return prisma.auditLog.findMany({
+    where: {
+      tenantId,
+    },
     take: limit,
     orderBy: {
       criadoEm: "desc",

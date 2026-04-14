@@ -31,8 +31,24 @@ enum PerfilPessoa {
   AGREGADO
 }
 
+model Tenant {
+  id         Int        @id @default(autoincrement())
+  slug       String     @unique
+  nome       String
+  ativo      Boolean    @default(true)
+  criadoEm   DateTime   @default(now())
+
+  usuarios   Usuario[]
+  relatorios Relatorio[]
+  relatorioItens RelatorioItem[]
+  auditLogs  AuditLog[]
+
+  @@map("tenants")
+}
+
 model Usuario {
   id              Int              @id @default(autoincrement())
+  tenantId        Int
   nome            String
   usuario         String           @unique
   email           String?          @unique
@@ -42,27 +58,33 @@ model Usuario {
   ativo           Boolean          @default(true)
   criadoEm        DateTime         @default(now())
 
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   relatorioItens  RelatorioItem[]
   auditLogs       AuditLog[]
 
+  @@index([tenantId, perfil, ativo])
   @@map("usuarios")
 }
 
 model Relatorio {
   id              Int              @id @default(autoincrement())
-  dataRelatorio   DateTime         @unique
+  tenantId        Int
+  dataRelatorio   DateTime
   status          StatusRelatorio  @default(ABERTO)
   criadoEm        DateTime         @default(now())
   finalizadoEm    DateTime?
 
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   itens           RelatorioItem[]
 
-  @@index([status, dataRelatorio])
+  @@unique([tenantId, dataRelatorio])
+  @@index([tenantId, status, dataRelatorio])
   @@map("relatorios")
 }
 
 model RelatorioItem {
   id              Int        @id @default(autoincrement())
+  tenantId        Int
   relatorioId     Int
   usuarioId       Int
   perfilPessoa    PerfilPessoa @default(VISITANTE)
@@ -75,20 +97,22 @@ model RelatorioItem {
   turno           String?
   criadoEm        DateTime   @default(now())
 
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   relatorio       Relatorio  @relation(fields: [relatorioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   usuario         Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@index([relatorioId])
-  @@index([usuarioId])
-  @@index([relatorioId, criadoEm])
-  @@index([usuarioId, criadoEm])
-  @@index([placaVeiculo])
-  @@index([nome])
+  @@index([tenantId, relatorioId])
+  @@index([tenantId, usuarioId])
+  @@index([tenantId, relatorioId, criadoEm])
+  @@index([tenantId, usuarioId, criadoEm])
+  @@index([tenantId, placaVeiculo])
+  @@index([tenantId, nome])
   @@map("relatorio_itens")
 }
 
 model AuditLog {
   id              Int       @id @default(autoincrement())
+  tenantId        Int
   usuarioId       Int?      @map("usuario_id")
   usuarioNome     String?   @map("usuario_nome")
   usuarioLogin    String?   @map("usuario_login")
@@ -102,10 +126,11 @@ model AuditLog {
   requestId       String?   @map("request_id")
   criadoEm        DateTime  @default(now()) @map("criado_em")
 
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  @@index([usuarioId])
-  @@index([criadoEm])
+  @@index([tenantId, usuarioId])
+  @@index([tenantId, criadoEm])
   @@map("audit_logs")
 }
 

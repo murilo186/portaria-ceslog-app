@@ -10,13 +10,13 @@ export type RelatorioQueryServiceApi = Pick<
 >;
 
 export function createRelatorioQueryService({ repository, runtime }: RelatorioServiceContext): RelatorioQueryServiceApi {
-  async function listReportsService() {
-    const reports = await repository.listReportSummaries();
+  async function listReportsService(tenantId: number) {
+    const reports = await repository.listReportSummaries(tenantId);
     return reports.map((report) => toRelatorioResumoResponse(report));
   }
 
-  async function listClosedReportsService(query: ClosedReportsQuery) {
-    const cached = runtime.cache.getClosedReportsCache(query);
+  async function listClosedReportsService(tenantId: number, query: ClosedReportsQuery) {
+    const cached = runtime.cache.getClosedReportsCache(tenantId, query);
 
     if (cached) {
       return cached;
@@ -58,8 +58,8 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
     }
 
     const [total, data] = await Promise.all([
-      repository.countClosedReports(where),
-      repository.listClosedReports(where, page, pageSize),
+      repository.countClosedReports(tenantId, where),
+      repository.listClosedReports(tenantId, where, page, pageSize),
     ]);
 
     const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
@@ -74,19 +74,19 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
       },
     };
 
-    runtime.cache.setClosedReportsCache(query, payload);
+    runtime.cache.setClosedReportsCache(tenantId, query, payload);
     return payload;
   }
 
-  async function getReportByIdService(relatorioId: number, query?: ReportItemsCursorQuery) {
+  async function getReportByIdService(tenantId: number, relatorioId: number, query?: ReportItemsCursorQuery) {
     if (query?.itemLimit) {
-      const relatorio = await repository.findReportByIdWithoutItems(relatorioId);
+      const relatorio = await repository.findReportByIdWithoutItems(tenantId, relatorioId);
 
       if (!relatorio) {
         throw RELATORIO_ERROR.reportNotFound();
       }
 
-      const rawItems = await repository.listReportItemsByCursor(relatorioId, query.itemCursor, query.itemLimit);
+      const rawItems = await repository.listReportItemsByCursor(tenantId, relatorioId, query.itemCursor, query.itemLimit);
       const hasMore = rawItems.length > query.itemLimit;
       const items = hasMore ? rawItems.slice(0, query.itemLimit) : rawItems;
       const nextItemCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
@@ -101,19 +101,19 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
       };
     }
 
-    const cached = runtime.cache.getReportDetailCache(relatorioId);
+    const cached = runtime.cache.getReportDetailCache(tenantId, relatorioId);
 
     if (cached) {
       return toRelatorioResponse(cached);
     }
 
-    const relatorio = await repository.findReportByIdWithItems(relatorioId);
+    const relatorio = await repository.findReportByIdWithItems(tenantId, relatorioId);
 
     if (!relatorio) {
       throw RELATORIO_ERROR.reportNotFound();
     }
 
-    runtime.cache.setReportDetailCache(relatorioId, relatorio);
+    runtime.cache.setReportDetailCache(tenantId, relatorioId, relatorio);
     return toRelatorioResponse(relatorio);
   }
 

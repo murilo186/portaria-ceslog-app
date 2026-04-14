@@ -1,4 +1,4 @@
-import { createAuditLog } from "../../services/auditService";
+﻿import { createAuditLog } from "../../services/auditService";
 import { getRelatorioClockService, setRelatorioClockSimulationService } from "../../services/relatorioService";
 import { RELATORIO_ERROR } from "../../services/relatorio/errors";
 import { getRequestMetadata } from "../../utils/requestMetadata";
@@ -26,6 +26,7 @@ export const setRelatorioClockSimulationController = asyncHandler(async (req, re
   const snapshot = setRelatorioClockSimulationService(start ?? null);
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 import { createRelatorioQueryService } from "../../src/services/relatorio/createRelatorioQueryService";
 import type { IRelatorioRepository } from "../../src/repositories/relatorioRepository";
 import type { RelatorioRuntimeDeps } from "../../src/services/relatorio/dependencies";
@@ -63,6 +63,7 @@ describe("createRelatorioQueryService", () => {
     const runtime = createRuntimeMock();
     vi.mocked(repository.findReportByIdWithoutItems).mockResolvedValue({
       id: 7,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
       status: "ABERTO",
       criadoEm: new Date("2026-04-13T00:00:00.000Z"),
@@ -71,6 +72,7 @@ describe("createRelatorioQueryService", () => {
     vi.mocked(repository.listReportItemsByCursor).mockResolvedValue([
       {
         id: 30,
+        tenantId: 1,
         relatorioId: 7,
         usuarioId: 1,
         perfilPessoa: "VISITANTE",
@@ -93,6 +95,7 @@ describe("createRelatorioQueryService", () => {
       },
       {
         id: 29,
+        tenantId: 1,
         relatorioId: 7,
         usuarioId: 1,
         perfilPessoa: "VISITANTE",
@@ -115,6 +118,7 @@ describe("createRelatorioQueryService", () => {
       },
       {
         id: 28,
+        tenantId: 1,
         relatorioId: 7,
         usuarioId: 1,
         perfilPessoa: "VISITANTE",
@@ -138,7 +142,7 @@ describe("createRelatorioQueryService", () => {
     ]);
 
     const service = createRelatorioQueryService({ repository, runtime });
-    const result = await service.getReportByIdService(7, { itemLimit: 2 });
+    const result = await service.getReportByIdService(1, 7, { itemLimit: 2 });
 
     expect(result).not.toBeNull();
     expect(result?.itens).toHaveLength(2);
@@ -149,7 +153,7 @@ describe("createRelatorioQueryService", () => {
     });
   });
 
-  it("usa cache para listagem de relatórios fechados quando disponível", async () => {
+  it("usa cache para listagem de relatorios fechados quando disponivel", async () => {
     const repository = createRepositoryMock();
     const runtime = createRuntimeMock();
     vi.mocked(runtime.cache.getClosedReportsCache).mockReturnValue({
@@ -163,7 +167,7 @@ describe("createRelatorioQueryService", () => {
     });
 
     const service = createRelatorioQueryService({ repository, runtime });
-    const response = await service.listClosedReportsService({ page: 1, pageSize: 10 });
+    const response = await service.listClosedReportsService(1, { page: 1, pageSize: 10 });
 
     expect(response.meta.total).toBe(0);
     expect(repository.countClosedReports).not.toHaveBeenCalled();

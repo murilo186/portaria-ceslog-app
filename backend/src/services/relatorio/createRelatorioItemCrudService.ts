@@ -21,8 +21,8 @@ function toNormalizedItemPayload(payload: RelatorioItemEditableInput, sanitize: 
 }
 
 export function createRelatorioItemCrudService({ repository, runtime }: RelatorioServiceContext): RelatorioItemCrudServiceApi {
-  async function getManagedRelatorioItem(relatorioId: number, itemId: number) {
-    const item = await repository.findManagedItem(itemId);
+  async function getManagedRelatorioItem(tenantId: number, relatorioId: number, itemId: number) {
+    const item = await repository.findManagedItem(tenantId, itemId);
 
     if (!item || item.relatorioId !== relatorioId) {
       throw RELATORIO_ERROR.itemNotFound();
@@ -36,7 +36,7 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
     payload: RelatorioItemEditableInput,
     user: AuthenticatedUser,
   ) {
-    const relatorio = await repository.findReportStatusById(relatorioId);
+    const relatorio = await repository.findReportStatusById(user.tenantId, relatorioId);
 
     if (!relatorio) {
       throw RELATORIO_ERROR.reportNotFound();
@@ -47,13 +47,14 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
     }
 
     const created = await repository.createRelatorioItem({
+      tenantId: user.tenantId,
       relatorioId: relatorio.id,
       usuarioId: user.id,
       ...toNormalizedItemPayload(payload, runtime.sanitize),
       turno: user.turno,
     });
 
-    runtime.cache.invalidateRelatorioReadCaches(relatorio.id);
+    runtime.cache.invalidateRelatorioReadCaches(user.tenantId, relatorio.id);
 
     return {
       ...created,
@@ -74,14 +75,14 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
     payload: RelatorioItemEditableInput,
     user: AuthenticatedUser,
   ) {
-    const item = await getManagedRelatorioItem(relatorioId, itemId);
+    const item = await getManagedRelatorioItem(user.tenantId, relatorioId, itemId);
     runtime.policies.assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
     const updated = await repository.updateRelatorioItem(item.id, {
       ...toNormalizedItemPayload(payload, runtime.sanitize),
     });
 
-    runtime.cache.invalidateRelatorioReadCaches(item.relatorioId);
+    runtime.cache.invalidateRelatorioReadCaches(user.tenantId, item.relatorioId);
 
     return {
       ...updated,
@@ -90,11 +91,11 @@ export function createRelatorioItemCrudService({ repository, runtime }: Relatori
   }
 
   async function deleteRelatorioItemService(relatorioId: number, itemId: number, user: AuthenticatedUser) {
-    const item = await getManagedRelatorioItem(relatorioId, itemId);
+    const item = await getManagedRelatorioItem(user.tenantId, relatorioId, itemId);
     runtime.policies.assertCanManageItem(user, item.usuarioId, item.relatorio.status);
 
     await repository.deleteRelatorioItemById(item.id);
-    runtime.cache.invalidateRelatorioReadCaches(item.relatorioId);
+    runtime.cache.invalidateRelatorioReadCaches(user.tenantId, item.relatorioId);
 
     return { ok: true } as const;
   }

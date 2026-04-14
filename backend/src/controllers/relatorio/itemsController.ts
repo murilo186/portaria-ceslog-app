@@ -1,4 +1,4 @@
-import { createAuditLog } from "../../services/auditService";
+﻿import { createAuditLog } from "../../services/auditService";
 import {
   createRelatorioItemService,
   deleteRelatorioItemService,
@@ -20,11 +20,13 @@ export const createRelatorioItemController = asyncHandler(async (req, res) => {
   console.info("relatorio_item_created", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId,
     itemId: item.id,
   });
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,
@@ -56,11 +58,13 @@ export const updateRelatorioItemController = asyncHandler(async (req, res) => {
   console.info("relatorio_item_updated", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId,
     itemId,
   });
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,
@@ -91,11 +95,13 @@ export const deleteRelatorioItemController = asyncHandler(async (req, res) => {
   console.info("relatorio_item_deleted", {
     requestId: requestMeta.requestId,
     userId: user.id,
+    tenantId: user.tenantId,
     relatorioId,
     itemId,
   });
 
   await createAuditLog({
+    tenantId: user.tenantId,
     usuarioId: user.id,
     usuarioNome: user.nome,
     usuarioLogin: user.usuario,

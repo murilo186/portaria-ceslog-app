@@ -23,6 +23,9 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
 
     req.user = {
       id: payload.sub,
+      tenantId: payload.tenantId,
+      tenantSlug: payload.tenantSlug,
+      tenantNome: payload.tenantNome,
       perfil: payload.perfil,
       nome: payload.nome,
       usuario: payload.usuario,

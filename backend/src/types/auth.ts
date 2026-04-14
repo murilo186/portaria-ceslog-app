@@ -7,6 +7,9 @@ export type LoginInput = {
 
 export type AuthTokenPayload = {
   sub: number;
+  tenantId: number;
+  tenantSlug: string;
+  tenantNome: string;
   perfil: PerfilUsuario;
   nome: string;
   usuario: string | null;
@@ -17,6 +20,9 @@ export type AuthTokenPayload = {
 
 export type AuthenticatedUser = {
   id: number;
+  tenantId: number;
+  tenantSlug: string;
+  tenantNome: string;
   perfil: PerfilUsuario;
   nome: string;
   usuario: string | null;

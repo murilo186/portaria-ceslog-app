@@ -12,6 +12,7 @@ export const loginController = asyncHandler(async (req, res) => {
   });
 
   await createAuditLog({
+    tenantId: data.usuario.tenant.id,
     usuarioId: data.usuario.id,
     usuarioNome: data.usuario.nome,
     usuarioLogin: data.usuario.usuario,

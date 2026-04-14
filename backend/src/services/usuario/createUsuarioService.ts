@@ -27,11 +27,11 @@ function buildInternalEmail(usuario: string): string {
 }
 
 export function createUsuarioService({ repository, passwordHasher }: UsuarioServiceDeps) {
-  async function listUsuariosService() {
-    return repository.listUsuarios();
+  async function listUsuariosService(tenantId: number) {
+    return repository.listUsuarios(tenantId);
   }
 
-  async function createUsuarioService(input: CreateUsuarioInput) {
+  async function createUsuarioService(input: CreateUsuarioInput, tenantId: number) {
     const nome = normalizeNome(input.nome);
     const usuario = normalizeUsuario(input.usuario);
 
@@ -52,6 +52,7 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
     const senhaHash = await passwordHasher.hash(input.senha, 10);
 
     return repository.createOperador({
+      tenantId,
       nome,
       usuario,
       email: buildInternalEmail(usuario),
@@ -62,12 +63,12 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
     });
   }
 
-  async function deleteUsuarioService(usuarioId: number, currentAdminId: number) {
-    return setUsuarioAtivoService(usuarioId, currentAdminId, false);
+  async function deleteUsuarioService(usuarioId: number, currentAdminId: number, tenantId: number) {
+    return setUsuarioAtivoService(usuarioId, currentAdminId, tenantId, false);
   }
 
-  async function setUsuarioAtivoService(usuarioId: number, currentAdminId: number, ativo: boolean) {
-    const usuario = await repository.findByIdForManagement(usuarioId);
+  async function setUsuarioAtivoService(usuarioId: number, currentAdminId: number, tenantId: number, ativo: boolean) {
+    const usuario = await repository.findByIdForManagement(tenantId, usuarioId);
 
     if (!usuario) {
       throw new AppError("Usuario nao encontrado.", 404, "USER_NOT_FOUND");
@@ -86,16 +87,16 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
     }
 
     if (ativo) {
-      await repository.activateById(usuarioId);
+      await repository.activateById(tenantId, usuarioId);
     } else {
-      await repository.deactivateById(usuarioId);
+      await repository.deactivateById(tenantId, usuarioId);
     }
 
     return { ok: true } as const;
   }
 
-  async function updateUsuarioSenhaService(usuarioId: number, currentAdminId: number, novaSenha: string) {
-    const usuario = await repository.findByIdForManagement(usuarioId);
+  async function updateUsuarioSenhaService(usuarioId: number, currentAdminId: number, tenantId: number, novaSenha: string) {
+    const usuario = await repository.findByIdForManagement(tenantId, usuarioId);
 
     if (!usuario) {
       throw new AppError("Usuario nao encontrado.", 404, "USER_NOT_FOUND");
@@ -110,7 +111,7 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
     }
 
     const senhaHash = await passwordHasher.hash(novaSenha, 10);
-    await repository.updateSenhaHash(usuarioId, senhaHash);
+    await repository.updateSenhaHash(tenantId, usuarioId, senhaHash);
 
     return { ok: true } as const;
   }

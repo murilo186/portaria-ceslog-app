@@ -10,6 +10,15 @@ const authLoginUserSelect = {
   perfil: true,
   turno: true,
   ativo: true,
+  tenantId: true,
+  tenant: {
+    select: {
+      id: true,
+      slug: true,
+      nome: true,
+      ativo: true,
+    },
+  },
 } as const;
 
 export type AuthLoginUser = Prisma.UsuarioGetPayload<{

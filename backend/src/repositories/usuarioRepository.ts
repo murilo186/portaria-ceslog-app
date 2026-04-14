@@ -35,18 +35,19 @@ export type UsuarioManageItem = Prisma.UsuarioGetPayload<{
 }>;
 
 export interface IUsuarioRepository {
-  listUsuarios(): Promise<AdminUsuarioListItem[]>;
+  listUsuarios(tenantId: number): Promise<AdminUsuarioListItem[]>;
   findByUsuario(usuario: string): Promise<UsuarioMinimal | null>;
   createOperador(data: Prisma.UsuarioUncheckedCreateInput): Promise<AdminUsuarioListItem>;
-  findByIdForManagement(usuarioId: number): Promise<UsuarioManageItem | null>;
-  deactivateById(usuarioId: number): Promise<void>;
-  activateById(usuarioId: number): Promise<void>;
-  updateSenhaHash(usuarioId: number, senhaHash: string): Promise<void>;
+  findByIdForManagement(tenantId: number, usuarioId: number): Promise<UsuarioManageItem | null>;
+  deactivateById(tenantId: number, usuarioId: number): Promise<void>;
+  activateById(tenantId: number, usuarioId: number): Promise<void>;
+  updateSenhaHash(tenantId: number, usuarioId: number, senhaHash: string): Promise<void>;
 }
 
 export const usuarioRepository: IUsuarioRepository = {
-  async listUsuarios() {
+  async listUsuarios(tenantId: number) {
     return prisma.usuario.findMany({
+      where: { tenantId },
       select: adminUsuarioListSelect,
       orderBy: [{ ativo: "desc" }, { nome: "asc" }],
     });
@@ -66,30 +67,42 @@ export const usuarioRepository: IUsuarioRepository = {
     });
   },
 
-  async findByIdForManagement(usuarioId: number) {
-    return prisma.usuario.findUnique({
-      where: { id: usuarioId },
+  async findByIdForManagement(tenantId: number, usuarioId: number) {
+    return prisma.usuario.findFirst({
+      where: {
+        tenantId,
+        id: usuarioId,
+      },
       select: usuarioManageSelect,
     });
   },
 
-  async deactivateById(usuarioId: number) {
-    await prisma.usuario.update({
-      where: { id: usuarioId },
+  async deactivateById(tenantId: number, usuarioId: number) {
+    await prisma.usuario.updateMany({
+      where: {
+        tenantId,
+        id: usuarioId,
+      },
       data: { ativo: false },
     });
   },
 
-  async activateById(usuarioId: number) {
-    await prisma.usuario.update({
-      where: { id: usuarioId },
+  async activateById(tenantId: number, usuarioId: number) {
+    await prisma.usuario.updateMany({
+      where: {
+        tenantId,
+        id: usuarioId,
+      },
       data: { ativo: true },
     });
   },
 
-  async updateSenhaHash(usuarioId: number, senhaHash: string) {
-    await prisma.usuario.update({
-      where: { id: usuarioId },
+  async updateSenhaHash(tenantId: number, usuarioId: number, senhaHash: string) {
+    await prisma.usuario.updateMany({
+      where: {
+        tenantId,
+        id: usuarioId,
+      },
       data: { senhaHash },
     });
   },

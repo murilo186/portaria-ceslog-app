@@ -59,6 +59,9 @@ function createRuntimeMock(): RelatorioRuntimeDeps {
 
 const operador = {
   id: 1,
+  tenantId: 1,
+  tenantSlug: "ceslog",
+  tenantNome: "CESLOG",
   nome: "Operador",
   usuario: "operador",
   email: null,
@@ -74,6 +77,7 @@ describe("createRelatorioItemCrudService", () => {
 
     vi.mocked(repository.findManagedItem).mockResolvedValue({
       id: 10,
+      tenantId: 1,
       relatorioId: 5,
       usuarioId: 1,
       perfilPessoa: "VISITANTE",
@@ -87,6 +91,7 @@ describe("createRelatorioItemCrudService", () => {
       criadoEm: new Date("2026-04-13T08:00:00.000Z"),
       relatorio: {
         id: 5,
+        tenantId: 1,
         dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
         status: "ABERTO",
         criadoEm: new Date("2026-04-13T00:00:00.000Z"),
@@ -103,6 +108,7 @@ describe("createRelatorioItemCrudService", () => {
     });
     vi.mocked(repository.updateRelatorioItem).mockResolvedValue({
       id: 10,
+      tenantId: 1,
       relatorioId: 5,
       usuarioId: 1,
       perfilPessoa: "VISITANTE",
@@ -141,6 +147,7 @@ describe("createRelatorioItemCrudService", () => {
     const runtime = createRuntimeMock();
     vi.mocked(repository.findManagedItem).mockResolvedValue({
       id: 11,
+      tenantId: 1,
       relatorioId: 6,
       usuarioId: 2,
       perfilPessoa: "VISITANTE",
@@ -154,6 +161,7 @@ describe("createRelatorioItemCrudService", () => {
       criadoEm: new Date("2026-04-13T08:00:00.000Z"),
       relatorio: {
         id: 6,
+        tenantId: 1,
         dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
         status: "ABERTO",
         criadoEm: new Date("2026-04-13T00:00:00.000Z"),

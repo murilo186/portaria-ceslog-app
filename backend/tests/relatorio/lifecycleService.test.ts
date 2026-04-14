@@ -63,6 +63,7 @@ describe("createRelatorioLifecycleService", () => {
     const runtime = createRuntimeMock();
     vi.mocked(repository.findOpenReportWithItems).mockResolvedValue({
       id: 1,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
       status: "ABERTO",
       criadoEm: new Date("2026-04-13T00:00:00.000Z"),
@@ -72,7 +73,7 @@ describe("createRelatorioLifecycleService", () => {
 
     const service = createRelatorioLifecycleService({ repository, runtime });
 
-    await expect(service.createNewReportService()).rejects.toMatchObject({
+    await expect(service.createNewReportService(1)).rejects.toMatchObject({
       code: "OPEN_REPORT_EXISTS",
       statusCode: 409,
     });
@@ -84,6 +85,7 @@ describe("createRelatorioLifecycleService", () => {
 
     vi.mocked(repository.findReportById).mockResolvedValue({
       id: 10,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
       status: "ABERTO",
       criadoEm: new Date("2026-04-13T01:00:00.000Z"),
@@ -91,6 +93,7 @@ describe("createRelatorioLifecycleService", () => {
     });
     vi.mocked(repository.updateRelatorioAsClosed).mockResolvedValue({
       id: 10,
+      tenantId: 1,
       dataRelatorio: new Date("2026-04-13T00:00:00.000Z"),
       status: "FECHADO",
       criadoEm: new Date("2026-04-13T01:00:00.000Z"),
@@ -98,10 +101,10 @@ describe("createRelatorioLifecycleService", () => {
     });
 
     const service = createRelatorioLifecycleService({ repository, runtime });
-    const result = await service.closeRelatorioService(10);
+    const result = await service.closeRelatorioService(1, 10);
 
     expect(repository.updateRelatorioAsClosed).toHaveBeenCalledOnce();
-    expect(runtime.cache.invalidateRelatorioReadCaches).toHaveBeenCalledWith(10);
+    expect(runtime.cache.invalidateRelatorioReadCaches).toHaveBeenCalledWith(1, 10);
     expect(result.status).toBe("FECHADO");
     expect(result.dataRelatorio).toContain("2026-04-13");
   });
