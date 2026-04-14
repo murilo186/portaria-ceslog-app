@@ -15,7 +15,13 @@ export const perfilPessoaSchema = z.enum([
   "AGREGADO",
 ]);
 
-export const usuarioSchema = z.object({
+export const tenantInfoSchema = z.object({
+  id: z.number().int(),
+  slug: z.string().min(1),
+  nome: z.string().min(1),
+});
+
+export const usuarioResumoSchema = z.object({
   id: z.number().int(),
   nome: z.string().min(1),
   usuario: z.string().min(1).nullable(),
@@ -24,7 +30,11 @@ export const usuarioSchema = z.object({
   turno: turnoUsuarioSchema.nullable(),
 });
 
-export const usuarioAdminListItemSchema = usuarioSchema.extend({
+export const usuarioSchema = usuarioResumoSchema.extend({
+  tenant: tenantInfoSchema,
+});
+
+export const usuarioAdminListItemSchema = usuarioResumoSchema.extend({
   ativo: z.boolean(),
   criadoEm: isoStringSchema,
 });
@@ -42,7 +52,7 @@ export const relatorioItemSchema = z.object({
   observacoes: z.string().nullable(),
   turno: z.string().nullable(),
   criadoEm: isoStringSchema,
-  usuario: usuarioSchema.optional(),
+  usuario: usuarioResumoSchema.optional(),
 });
 
 export const relatorioSchema = z.object({

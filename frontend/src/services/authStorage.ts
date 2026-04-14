@@ -45,7 +45,7 @@ export function getAuthSession(): AuthState | null {
   try {
     const parsed = JSON.parse(raw) as AuthState;
 
-    if (!parsed?.token || !parsed?.usuario) {
+    if (!parsed?.token || !parsed?.usuario || !parsed.usuario.tenant?.slug) {
       clearAuthSession();
       return null;
     }

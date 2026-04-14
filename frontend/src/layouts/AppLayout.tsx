@@ -1,5 +1,6 @@
 ﻿import { clearAuthSession, getAuthSession } from "../services/authStorage";
 import { subscribeAuthRequired } from "../services/authEvents";
+import { applyTenantTheme, getTenantTheme } from "../theme/tenantTheme";
 import { FaArrowRightFromBracket } from "react-icons/fa6";
 import { IoArrowUndo } from "react-icons/io5";
 import type { ReactNode } from "react";
@@ -21,6 +22,7 @@ function redirectToLogin(
   }
 
   clearAuthSession();
+  applyTenantTheme("ceslog");
   navigate("/", {
     replace,
     state: {
@@ -32,9 +34,15 @@ function redirectToLogin(
 export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const authSession = getAuthSession();
+  const tenantTheme = getTenantTheme(authSession?.usuario?.tenant?.slug);
   const isLoginPage = location.pathname === "/";
   const showBackButton =
     location.pathname === "/relatorio" || location.pathname === "/registros" || location.pathname.startsWith("/registros/");
+
+  useEffect(() => {
+    applyTenantTheme(authSession?.usuario?.tenant?.slug ?? "ceslog");
+  }, [authSession?.usuario?.tenant?.slug]);
 
   useEffect(() => {
     const unsubscribe = subscribeAuthRequired((payload) => {
@@ -69,6 +77,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const handleLogout = () => {
     clearAuthSession();
+    applyTenantTheme("ceslog");
     navigate("/", { replace: true });
   };
 
@@ -102,7 +111,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             <div className="flex items-center justify-center">
-              <img src="/logo-ceslog.png" alt="Ceslog" className="h-9 w-auto object-contain" />
+              <img src={tenantTheme.logoSrc} alt={tenantTheme.nome} className="h-9 w-auto object-contain" />
             </div>
 
             <div className="flex items-center justify-end">

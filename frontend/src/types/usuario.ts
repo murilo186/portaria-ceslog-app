@@ -1,6 +1,8 @@
-﻿export type TurnoUsuario = "MANHA" | "TARDE";
+﻿import type { TenantInfo } from "./tenant";
 
-export interface Usuario {
+export type TurnoUsuario = "MANHA" | "TARDE";
+
+export interface UsuarioResumo {
   id: number;
   nome: string;
   usuario: string | null;
@@ -9,13 +11,11 @@ export interface Usuario {
   turno: TurnoUsuario | null;
 }
 
-export interface UsuarioAdminListItem {
-  id: number;
-  nome: string;
-  usuario: string | null;
-  email: string | null;
-  perfil: "ADMIN" | "OPERADOR";
-  turno: TurnoUsuario | null;
+export interface Usuario extends UsuarioResumo {
+  tenant: TenantInfo;
+}
+
+export interface UsuarioAdminListItem extends UsuarioResumo {
   ativo: boolean;
   criadoEm: string;
 }

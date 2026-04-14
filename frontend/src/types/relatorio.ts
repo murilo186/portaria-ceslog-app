@@ -1,4 +1,4 @@
-﻿import type { Usuario } from "./usuario";
+﻿import type { UsuarioResumo } from "./usuario";
 
 export type PerfilPessoa =
   | "VISITANTE"
@@ -21,7 +21,7 @@ export interface RelatorioItem {
   observacoes: string | null;
   turno: string | null;
   criadoEm: string;
-  usuario?: Usuario;
+  usuario?: UsuarioResumo;
 }
 
 export interface RelatorioItemEditableFields {
@@ -82,5 +82,3 @@ export interface RelatorioClockSnapshot {
   simulationEnabled: boolean;
   simulationStart: string | null;
 }
-
-
