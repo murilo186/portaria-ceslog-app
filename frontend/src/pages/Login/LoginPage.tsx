@@ -51,13 +51,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-white">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex justify-center">
-          <img src="/logo-ceslog.png" alt="Ceslog" className="h-20 w-auto object-contain sm:h-24" />
+        <div className="mb-6 flex items-center justify-center gap-4">
+          <img src="/logo-ceslog.png" alt="Ceslog" className="h-14 w-auto object-contain sm:h-16" />
+          <img src="/logo-ucc.png" alt="UCC" className="h-14 w-auto object-contain sm:h-16" />
         </div>
 
-        <Card className="w-full p-6 sm:p-8">
+        <Card className="w-full border-0 p-6 sm:p-8">
           <div className="mb-6 space-y-1">
             <h1 className="text-2xl font-semibold text-text-900">Acesso ao sistema</h1>
             <p className="text-sm text-text-700">Entre com seu usuario e senha para continuar.</p>
@@ -89,7 +90,11 @@ export default function LoginPage() {
             {locationState?.authMessage ? <FeedbackMessage message={locationState.authMessage} tone="warning" /> : null}
             {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
 
-            <Button type="submit" className="mt-2 w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="mt-2 w-full !bg-black !text-white hover:!bg-zinc-900 focus-visible:!ring-black"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
           </form>
