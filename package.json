@@ -1,0 +1,12 @@
+{
+  "name": "portaria-app-ceslog",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n BACK,FRONT -c yellow,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend -- --host --strictPort --port 5173\"",
+    "encoding:check": "node scripts/check-encoding.mjs",
+    "encoding:fix": "node scripts/fix-encoding.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

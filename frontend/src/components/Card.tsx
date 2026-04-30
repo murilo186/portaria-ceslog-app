@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Card as MuiCard, CardContent } from "@mui/material";
 
 type CardProps = {
   children: ReactNode;
@@ -7,8 +8,10 @@ type CardProps = {
 
 export default function Card({ children, className = "" }: CardProps) {
   return (
-    <section className={`rounded-lg border border-surface-200 bg-white p-5 ${className}`.trim()}>
-      {children}
-    </section>
+    <MuiCard className={className} sx={{ borderRadius: 3 }}>
+      <CardContent sx={{ p: { xs: 2.5, sm: 3, md: 3.5 }, "&:last-child": { pb: { xs: 2.5, sm: 3, md: 3.5 } } }}>
+        {children}
+      </CardContent>
+    </MuiCard>
   );
 }

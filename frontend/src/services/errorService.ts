@@ -1,4 +1,4 @@
-﻿import { ApiError } from "./api";
+import { ApiError } from "./api";
 
 const STATUS_MESSAGE_MAP: Record<number, string> = {
   401: "Sessão expirada ou inválida. Faça login novamente.",

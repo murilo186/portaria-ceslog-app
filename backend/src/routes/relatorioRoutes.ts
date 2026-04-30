@@ -1,4 +1,4 @@
-﻿import {
+import {
   closeRelatorioController,
   createNewReportController,
   createRelatorioItemController,

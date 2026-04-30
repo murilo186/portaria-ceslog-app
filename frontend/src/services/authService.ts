@@ -1,4 +1,4 @@
-﻿import { apiRequestWithSchema } from "./api";
+import { apiRequestWithSchema } from "./api";
 import { loginResponseSchema } from "./contracts";
 import type { LoginRequest, LoginResponse } from "../types/auth";
 

@@ -1,4 +1,4 @@
-﻿import { checkHealthService } from "../services/healthService";
+import { checkHealthService } from "../services/healthService";
 import type { Request, Response } from "express";
 
 export async function healthController(req: Request, res: Response) {

@@ -1,4 +1,4 @@
-﻿export type AuthEventReason = "expired" | "unauthorized" | "required";
+export type AuthEventReason = "expired" | "unauthorized" | "required";
 
 export type AuthEventPayload = {
   reason: AuthEventReason;

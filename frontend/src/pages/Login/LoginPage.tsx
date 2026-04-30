@@ -3,6 +3,7 @@ import { getUserErrorMessage } from "../../services/errorService";
 import { login } from "../../services/authService";
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Box, Typography } from "@mui/material";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import FeedbackMessage from "../../components/FeedbackMessage";
@@ -43,7 +44,7 @@ export default function LoginPage() {
       const target = response.usuario.perfil === "ADMIN" ? "/admin" : "/dashboard";
       navigate(target, { replace: true });
     } catch (error) {
-      const message = getUserErrorMessage(error, "Nao foi possivel fazer login");
+      const message = getUserErrorMessage(error, "Não foi possível fazer login");
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -51,27 +52,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-4">
+    <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", px: 2 }}>
+      <Box sx={{ width: "100%", maxWidth: 440 }}>
+        <Box sx={{ mb: 3, display: "flex", justifyContent: "center", gap: 2 }}>
           <img src="/logo-ceslog.png" alt="Ceslog" className="h-14 w-auto object-contain sm:h-16" />
           <img src="/logo-ucc.png" alt="UCC" className="h-14 w-auto object-contain sm:h-16" />
-        </div>
+        </Box>
 
-        <Card className="w-full border-0 p-6 sm:p-8">
-          <div className="mb-6 space-y-1">
-            <h1 className="text-2xl font-semibold text-text-900">Acesso ao sistema</h1>
-            <p className="text-sm text-text-700">Entre com seu usuario e senha para continuar.</p>
-          </div>
+        <Card className="w-full border-0">
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Acesso ao sistema
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Entre com seu usuário e senha para continuar.
+            </Typography>
+          </Box>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gap: 1 }}>
             <Input
               id="usuario"
-              label="Usuario"
+              label="Usuário"
               type="text"
               value={usuario}
               onChange={(event) => setUsuario(event.target.value)}
-              placeholder="Digite seu usuario"
+              placeholder="Digite seu usuário"
               autoComplete="username"
               required
             />
@@ -90,16 +95,12 @@ export default function LoginPage() {
             {locationState?.authMessage ? <FeedbackMessage message={locationState.authMessage} tone="warning" /> : null}
             {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
 
-            <Button
-              type="submit"
-              className="mt-2 w-full !bg-black !text-white hover:!bg-zinc-900 focus-visible:!ring-black"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
-          </form>
+          </Box>
         </Card>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

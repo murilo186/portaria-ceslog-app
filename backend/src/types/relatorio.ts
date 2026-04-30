@@ -1,4 +1,4 @@
-﻿export type PerfilPessoa =
+export type PerfilPessoa =
   | "VISITANTE"
   | "FORNECEDOR"
   | "PRESTADOR"

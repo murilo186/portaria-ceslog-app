@@ -1,4 +1,4 @@
-﻿const REPORT_TIMEZONE = "America/Sao_Paulo";
+const REPORT_TIMEZONE = "America/Sao_Paulo";
 
 export function getBusinessDateKey(date = new Date()): string {
   const formatter = new Intl.DateTimeFormat("en-CA", {

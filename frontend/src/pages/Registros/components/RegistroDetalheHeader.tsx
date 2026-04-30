@@ -52,7 +52,7 @@ function RegistroDetalheHeader({
       {!isAdmin ? <p className="text-xs text-text-700">Somente administradores podem editar registros fechados.</p> : null}
       {appliedSearchFilter ? (
         <p className="text-xs text-text-700">
-          {totalOccurrences} ocorrencias em {matchedItems} item(ns) para "{appliedSearchFilter}".
+          {totalOccurrences} ocorrências em {matchedItems} item(ns) para "{appliedSearchFilter}".
         </p>
       ) : null}
       {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}

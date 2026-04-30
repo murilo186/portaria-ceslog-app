@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getAuthSession } from "../../../services/authStorage";
@@ -52,7 +52,7 @@ export function useRegistroDetalhePage() {
 
   const errorMessage = useMemo(() => {
     if (relatorioId && parsedRelatorioId === null) {
-      return "Identificador de relatorio invalido.";
+      return "Identificador de relatório inválido.";
     }
 
     if (!relatorioQuery.error) {

@@ -31,12 +31,12 @@ export function useRelatorioEditActions({
 
   const handleOpenEditModal = (item: RelatorioItem) => {
     if (isReadOnly) {
-      setFeedback({ type: "error", message: "Relatorio fechado. Edicao indisponivel." });
+      setFeedback({ type: "error", message: "Relatório fechado. Edição indisponível." });
       return;
     }
 
     if (!canManageItem(item)) {
-      setFeedback({ type: "error", message: "Voce so pode editar registros da sua autoria." });
+      setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
       return;
     }
 

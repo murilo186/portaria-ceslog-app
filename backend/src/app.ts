@@ -1,4 +1,4 @@
-﻿import { env } from "./config/env";
+import { env } from "./config/env";
 import { errorMiddleware } from "./middlewares/errorMiddleware";
 import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware";
 import healthRoutes from "./routes/healthRoutes";

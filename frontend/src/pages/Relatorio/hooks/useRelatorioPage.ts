@@ -33,17 +33,20 @@ export function useRelatorioPage() {
 
   const isReadOnly = relatorioStatus === "FECHADO";
 
-  const canManageItem = useCallback((item: RelatorioItem): boolean => {
-    if (!usuarioLogado) {
-      return false;
-    }
+  const canManageItem = useCallback(
+    (item: RelatorioItem): boolean => {
+      if (!usuarioLogado) {
+        return false;
+      }
 
-    if (usuarioLogado.perfil === "ADMIN") {
-      return true;
-    }
+      if (usuarioLogado.perfil === "ADMIN") {
+        return true;
+      }
 
-    return item.usuarioId === usuarioLogado.id;
-  }, [usuarioLogado]);
+      return item.usuarioId === usuarioLogado.id;
+    },
+    [usuarioLogado],
+  );
 
   const sortedItens = useMemo(() => {
     return [...itens].sort((a, b) => b.id - a.id);
@@ -64,10 +67,15 @@ export function useRelatorioPage() {
     handleCloseEditModal,
     handleEditSubmit,
     handleSimulateClockStart,
+    isCloseModalOpen,
+    handleOpenCloseModal,
+    handleCloseCloseModal,
+    handleConfirmClose,
   } = useRelatorioItemActions({
     token,
     relatorioId,
     isReadOnly,
+    setRelatorioStatus,
     setItens,
     canManageItem,
     setFeedback,
@@ -75,10 +83,7 @@ export function useRelatorioPage() {
     defaultSimulationStart,
   });
 
-  const getAutorLabelForItem = useCallback(
-    (item: RelatorioItem) => getAutorLabel(item, usuarioLogado),
-    [usuarioLogado],
-  );
+  const getAutorLabelForItem = useCallback((item: RelatorioItem) => getAutorLabel(item, usuarioLogado), [usuarioLogado]);
 
   return {
     showSimulationControls,
@@ -108,5 +113,9 @@ export function useRelatorioPage() {
     handleCloseEditModal,
     handleEditSubmit,
     handleSimulateClockStart,
+    isCloseModalOpen,
+    handleOpenCloseModal,
+    handleCloseCloseModal,
+    handleConfirmClose,
   };
 }

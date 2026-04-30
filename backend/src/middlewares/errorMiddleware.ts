@@ -1,4 +1,4 @@
-﻿import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 
 const SENSITIVE_KEYS = new Set(["senha", "password", "token", "authorization"]);

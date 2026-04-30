@@ -1,4 +1,4 @@
-﻿import { createAuditLog } from "../../services/auditService";
+import { createAuditLog } from "../../services/auditService";
 import {
   createRelatorioItemService,
   deleteRelatorioItemService,

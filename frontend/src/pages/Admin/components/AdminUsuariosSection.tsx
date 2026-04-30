@@ -157,7 +157,7 @@ export default function AdminUsuariosSection({
               value={novoUsuarioForm.turno}
               onChange={(event) => onChangeTurno(event.target.value as TurnoUsuario)}
             >
-              <option value="MANHA">MANHÃ</option>
+              <option value="MANHA">MANHA</option>
               <option value="TARDE">TARDE</option>
             </SelectField>
 
@@ -179,7 +179,7 @@ export default function AdminUsuariosSection({
                   setSearchTerm(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Ex.: Joao ou operador.manha"
+                placeholder="Ex.: João ou operador.manha"
               />
               <SelectField
                 id="usuarios-status"
@@ -223,14 +223,14 @@ export default function AdminUsuariosSection({
                         <StatusPill ativo={item.ativo} />
                       </div>
 
-                  {item.perfil === "ADMIN" ? null : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full sm:w-auto"
-                      onClick={() => handleOpenConfirm(item.id, item.ativo, item.nome)}
-                      disabled={!canToggle || isCreatingUsuario || (isUpdatingUsuarioAtivo && !isRowPending)}
-                    >
+                      {item.perfil === "ADMIN" ? null : (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full sm:w-auto"
+                          onClick={() => handleOpenConfirm(item.id, item.ativo, item.nome)}
+                          disabled={!canToggle || isCreatingUsuario || (isUpdatingUsuarioAtivo && !isRowPending)}
+                        >
                           {isRowPending && isUpdatingUsuarioAtivo
                             ? "Processando..."
                             : item.ativo
@@ -245,7 +245,7 @@ export default function AdminUsuariosSection({
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <p className="text-xs text-text-700">
-                  Página {safePage} de {totalPages} · {filteredUsuarios.length} usuário(s)
+                  Página {safePage} de {totalPages} - {filteredUsuarios.length} usuário(s)
                 </p>
                 <div className="flex gap-2">
                   <Button

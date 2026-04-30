@@ -1,7 +1,9 @@
+import { Skeleton as MuiSkeleton } from "@mui/material";
+
 type SkeletonProps = {
   className?: string;
 };
 
 export default function Skeleton({ className = "" }: SkeletonProps) {
-  return <span aria-hidden="true" className={`block animate-pulse rounded-md bg-surface-200 ${className}`.trim()} />;
+  return <MuiSkeleton className={className} variant="rounded" animation="wave" />;
 }

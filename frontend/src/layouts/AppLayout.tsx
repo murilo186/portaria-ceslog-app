@@ -1,4 +1,4 @@
-﻿import { clearAuthSession, getAuthSession } from "../services/authStorage";
+import { clearAuthSession, getAuthSession } from "../services/authStorage";
 import { subscribeAuthRequired } from "../services/authEvents";
 import { applyTenantTheme, getTenantTheme } from "../theme/tenantTheme";
 import { FaArrowRightFromBracket } from "react-icons/fa6";
@@ -6,6 +6,7 @@ import { IoArrowUndo } from "react-icons/io5";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AppBar, Box, Container, IconButton, Toolbar } from "@mui/material";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -83,52 +84,54 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const handleBack = () => {
     if (location.pathname === "/relatorio" || location.pathname === "/registros") {
-      navigate("/dashboard");
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
       return;
     }
 
     if (location.pathname.startsWith("/registros/")) {
-      navigate(-1);
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/registros", { replace: true });
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {isLoginPage ? null : (
-        <header className="bg-white">
-          <div className="mx-auto grid h-16 w-full max-w-6xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-start">
-              {showBackButton ? (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  aria-label="Voltar"
-                  className="flex h-9 w-9 items-center justify-center rounded-md border-0 bg-transparent transition-colors hover:bg-surface-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
-                >
-                  <IoArrowUndo className="h-5 w-5 text-brand-600" />
-                </button>
-              ) : null}
-            </div>
+        <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: "1px solid #e5e7eb" }}>
+          <Container maxWidth="lg">
+            <Toolbar disableGutters sx={{ minHeight: "64px", display: "grid", gridTemplateColumns: "1fr auto 1fr" }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+                {showBackButton ? (
+                  <IconButton onClick={handleBack} aria-label="Voltar" color="primary">
+                    <IoArrowUndo className="h-5 w-5" />
+                  </IconButton>
+                ) : null}
+              </Box>
 
-            <div className="flex items-center justify-center">
-              <img src={tenantTheme.logoSrc} alt={tenantTheme.nome} className="h-9 w-auto object-contain" />
-            </div>
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <img src={tenantTheme.logoSrc} alt={tenantTheme.nome} className="h-9 w-auto object-contain" />
+              </Box>
 
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label="Sair"
-                className="flex h-9 w-9 items-center justify-center rounded-md border-0 bg-transparent transition-colors hover:bg-surface-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
-              >
-                <FaArrowRightFromBracket className="h-5 w-5 text-brand-600" />
-              </button>
-            </div>
-          </div>
-        </header>
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <IconButton onClick={handleLogout} aria-label="Sair" color="primary">
+                  <FaArrowRightFromBracket className="h-5 w-5" />
+                </IconButton>
+              </Box>
+            </Toolbar>
+          </Container>
+        </AppBar>
       )}
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
-    </div>
+      <Container maxWidth="xl" sx={{ py: { xs: 3, sm: 4, md: 5 } }}>
+        {children}
+      </Container>
+    </Box>
   );
 }

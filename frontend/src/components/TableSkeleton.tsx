@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import Skeleton from "./Skeleton";
 
 type TableSkeletonProps = {
@@ -8,14 +9,17 @@ type TableSkeletonProps = {
 
 export default function TableSkeleton({ rows = 6, columns = 6, className = "" }: TableSkeletonProps) {
   return (
-    <div className={`space-y-2 ${className}`.trim()}>
+    <Box className={className} sx={{ display: "grid", gap: 1 }}>
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={`table-skeleton-row-${rowIndex}`} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        <Box
+          key={`table-skeleton-row-${rowIndex}`}
+          sx={{ display: "grid", gap: 1, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+        >
           {Array.from({ length: columns }).map((__, colIndex) => (
             <Skeleton key={`table-skeleton-cell-${rowIndex}-${colIndex}`} className="h-4 w-full" />
           ))}
-        </div>
+        </Box>
       ))}
-    </div>
+    </Box>
   );
 }

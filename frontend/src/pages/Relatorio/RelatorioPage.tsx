@@ -1,4 +1,5 @@
-﻿import { perfilPessoaLabel } from "../../utils/perfilPessoa";
+import ConfirmModal from "../../components/ConfirmModal";
+import { perfilPessoaLabel } from "../../utils/perfilPessoa";
 import RelatorioCreateForm from "./components/RelatorioCreateForm";
 import RelatorioDesktopTable from "./components/RelatorioDesktopTable";
 import RelatorioEditModal from "./components/RelatorioEditModal";
@@ -35,6 +36,10 @@ export default function RelatorioPage() {
     handleCloseEditModal,
     handleEditSubmit,
     handleSimulateClockStart,
+    isCloseModalOpen,
+    handleOpenCloseModal,
+    handleCloseCloseModal,
+    handleConfirmClose,
   } = useRelatorioPage();
 
   return (
@@ -46,6 +51,7 @@ export default function RelatorioPage() {
           isLoading={isLoading}
           isReadOnly={isReadOnly}
           onSimulateClockStart={handleSimulateClockStart}
+          onOpenCloseModal={handleOpenCloseModal}
           relatorioStatus={relatorioStatus}
           turnoAtual={turnoAtual}
           usuarioNome={usuarioNome}
@@ -99,6 +105,17 @@ export default function RelatorioPage() {
         setValues={setEditFormValues}
         onClose={handleCloseEditModal}
         onSubmit={handleEditSubmit}
+      />
+
+      <ConfirmModal
+        isOpen={isCloseModalOpen}
+        title="Fechar relatório"
+        description="Após fechar, não será mais possível editar os itens deste relatório. Deseja continuar?"
+        confirmLabel="Fechar relatório"
+        cancelLabel="Cancelar"
+        isConfirming={isSubmitting}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCloseCloseModal}
       />
     </>
   );

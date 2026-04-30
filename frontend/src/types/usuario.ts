@@ -1,4 +1,4 @@
-﻿import type { TenantInfo } from "./tenant";
+import type { TenantInfo } from "./tenant";
 
 export type TurnoUsuario = "MANHA" | "TARDE";
 

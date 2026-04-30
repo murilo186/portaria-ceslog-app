@@ -29,7 +29,7 @@ export default function RelatorioCreateForm({
 }: RelatorioCreateFormProps) {
   return (
     <Card>
-      <form className="grid grid-cols-2 gap-3 sm:gap-4" onSubmit={onSubmit} onKeyDown={onKeyDown}>
+      <form className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5" onSubmit={onSubmit} onKeyDown={onKeyDown}>
         <Input
           id="empresa"
           label="Empresa"
@@ -100,19 +100,19 @@ export default function RelatorioCreateForm({
           disabled={isReadOnly}
         />
 
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <TextareaField
             id="observacoes"
             label="Observações"
             value={formValues.observacoes ?? ""}
             onChange={(event) => setFormValues((prev) => ({ ...prev, observacoes: event.target.value }))}
-            rows={3}
+            rows={4}
             placeholder="Informações adicionais"
             disabled={isReadOnly}
           />
         </div>
 
-        <div className="col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isLoading || isReadOnly}>
             {isReadOnly ? "Relatório fechado" : "Salvar registro"}
           </Button>

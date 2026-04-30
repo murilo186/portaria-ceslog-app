@@ -1,4 +1,5 @@
-﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.fn();
@@ -9,6 +10,7 @@ const updateRelatorioItemMock = vi.fn();
 const deleteRelatorioItemMock = vi.fn();
 const getRelatorioClockMock = vi.fn();
 const setRelatorioClockSimulationMock = vi.fn();
+const fecharRelatorioMock = vi.fn();
 
 vi.mock("../../src/services/authStorage", () => ({
   getAuthSession: () => getAuthSessionMock(),
@@ -21,6 +23,7 @@ vi.mock("../../src/services/relatorioService", () => ({
   deleteRelatorioItem: (...args: unknown[]) => deleteRelatorioItemMock(...args),
   getRelatorioClock: (...args: unknown[]) => getRelatorioClockMock(...args),
   setRelatorioClockSimulation: (...args: unknown[]) => setRelatorioClockSimulationMock(...args),
+  fecharRelatorio: (...args: unknown[]) => fecharRelatorioMock(...args),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -40,10 +43,31 @@ const authSession = {
     id: 1,
     nome: "Operador Manhã",
     usuario: "operador.manha",
+    email: "operador.manha@usuario.local",
     perfil: "OPERADOR",
     turno: "MANHA",
+    tenant: {
+      id: 1,
+      slug: "ceslog",
+      nome: "CESLOG",
+    },
   },
 };
+
+function renderWithProviders() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RelatorioPage />
+    </QueryClientProvider>,
+  );
+}
 
 describe("RelatorioPage", () => {
   beforeEach(() => {
@@ -68,7 +92,7 @@ describe("RelatorioPage", () => {
       perfilPessoa: "VISITANTE",
       empresa: "CESLOG",
       placaVeiculo: "ABC1D23",
-      nome: "João",
+      nome: "Joao",
       horaEntrada: "08:00",
       horaSaida: null,
       observacoes: "Entrada principal",
@@ -86,15 +110,15 @@ describe("RelatorioPage", () => {
       simulationStart: null,
     });
 
-    render(<RelatorioPage />);
+    renderWithProviders();
 
-    await screen.findByText("Relatorio do Dia");
+    await screen.findByText("Relatório do Dia");
 
-    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "  CESLOG  " } });
-    fireEvent.change(screen.getByLabelText("Placa do veículo"), { target: { value: "abc1d23" } });
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "João" } });
-    fireEvent.change(screen.getByLabelText("Hora de entrada"), { target: { value: "08:00" } });
-    fireEvent.change(screen.getByLabelText("Observações"), { target: { value: "Entrada principal" } });
+    fireEvent.change(screen.getByPlaceholderText("Nome da empresa"), { target: { value: "  CESLOG  " } });
+    fireEvent.change(screen.getByPlaceholderText("ABC-1D23"), { target: { value: "abc1d23" } });
+    fireEvent.change(screen.getByPlaceholderText("Nome da pessoa"), { target: { value: "Joao" } });
+    fireEvent.change(document.getElementById("horaEntrada") as HTMLInputElement, { target: { value: "08:00" } });
+    fireEvent.change(screen.getByPlaceholderText("Informações adicionais"), { target: { value: "Entrada principal" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Salvar registro" }));
 
@@ -108,7 +132,7 @@ describe("RelatorioPage", () => {
       perfilPessoa: "VISITANTE",
       empresa: "CESLOG",
       placaVeiculo: "ABC1D23",
-      nome: "João",
+      nome: "Joao",
       horaEntrada: "08:00",
     });
     expect(callArgs[2]).toBe("jwt.token");
@@ -135,9 +159,9 @@ describe("RelatorioPage", () => {
       simulationStart: null,
     });
 
-    render(<RelatorioPage />);
+    renderWithProviders();
 
-    await screen.findByText("Relatorio fechado: somente leitura.");
+    await screen.findByText("Relatório fechado: somente leitura.");
 
     const lockedButtons = screen.getAllByRole("button", { name: "Relatório fechado" });
     expect(lockedButtons.length).toBeGreaterThanOrEqual(1);

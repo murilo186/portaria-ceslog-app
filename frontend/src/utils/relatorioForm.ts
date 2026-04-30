@@ -1,4 +1,4 @@
-﻿import type { PerfilPessoa, RelatorioItemEditableFields } from "../types/relatorio";
+import type { PerfilPessoa, RelatorioItemEditableFields } from "../types/relatorio";
 
 const PLACA_REGEX = /^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/;
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;

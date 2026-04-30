@@ -65,7 +65,7 @@ export default function RelatorioEditModal({
           <h2 id="edit-registro-title" className="text-lg font-semibold text-text-900">
             Editar registro
           </h2>
-          <p className="text-sm text-text-700">Atualize os dados e salve as alteracoes.</p>
+          <p className="text-sm text-text-700">Atualize os dados e salve as alterações.</p>
         </div>
 
         <form className="grid grid-cols-2 gap-3 sm:gap-4" onSubmit={onSubmit}>
@@ -81,7 +81,7 @@ export default function RelatorioEditModal({
 
           <Input
             id="edit-placaVeiculo"
-            label="Placa do veiculo"
+            label="Placa do veículo"
             value={values.placaVeiculo ?? ""}
             onChange={(event) => setValues((prev) => ({ ...prev, placaVeiculo: formatPlacaInput(event.target.value) }))}
             required
@@ -128,7 +128,7 @@ export default function RelatorioEditModal({
           <Input
             id="edit-horaSaida"
             type="time"
-            label="Hora de saida"
+            label="Hora de saída"
             value={values.horaSaida ?? ""}
             onChange={(event) => setValues((prev) => ({ ...prev, horaSaida: event.target.value }))}
             disabled={isReadOnly}
@@ -137,7 +137,7 @@ export default function RelatorioEditModal({
           <div className="col-span-2">
             <TextareaField
               id="edit-observacoes"
-              label="Observacoes"
+              label="Observações"
               value={values.observacoes ?? ""}
               onChange={(event) => setValues((prev) => ({ ...prev, observacoes: event.target.value }))}
               rows={3}
@@ -156,7 +156,7 @@ export default function RelatorioEditModal({
               Cancelar
             </Button>
             <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isReadOnly}>
-              Salvar alteracoes
+              Salvar alterações
             </Button>
           </div>
         </form>

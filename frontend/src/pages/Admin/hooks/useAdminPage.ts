@@ -20,7 +20,7 @@ export function useAdminPage() {
   const navigateToDashboard = () => {
     navigate("/dashboard", {
       replace: true,
-      state: { authMessage: "Voce nao tem permissao para acessar a area administrativa." },
+      state: { authMessage: "Você não tem permissão para acessar a área administrativa." },
     });
   };
 

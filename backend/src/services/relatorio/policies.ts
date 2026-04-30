@@ -1,4 +1,4 @@
-﻿import type { StatusRelatorio } from "@prisma/client";
+import type { StatusRelatorio } from "@prisma/client";
 import type { AuthenticatedUser } from "../../types/auth";
 import { RELATORIO_ERROR } from "./errors";
 

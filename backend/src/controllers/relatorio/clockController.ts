@@ -1,4 +1,4 @@
-﻿import { createAuditLog } from "../../services/auditService";
+import { createAuditLog } from "../../services/auditService";
 import { getRelatorioClockService, setRelatorioClockSimulationService } from "../../services/relatorioService";
 import { RELATORIO_ERROR } from "../../services/relatorio/errors";
 import { getRequestMetadata } from "../../utils/requestMetadata";

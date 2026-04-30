@@ -9,6 +9,7 @@ type RelatorioHeaderProps = {
   isLoading: boolean;
   isReadOnly: boolean;
   onSimulateClockStart: () => void;
+  onOpenCloseModal: () => void;
   relatorioStatus: "ABERTO" | "FECHADO";
   turnoAtual: string;
   usuarioNome: string | null;
@@ -24,6 +25,7 @@ export default function RelatorioHeader({
   isLoading,
   isReadOnly,
   onSimulateClockStart,
+  onOpenCloseModal,
   relatorioStatus,
   turnoAtual,
   usuarioNome,
@@ -46,23 +48,32 @@ export default function RelatorioHeader({
             Simular 23:58
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          className="px-3 py-2 text-xs"
+          onClick={onOpenCloseModal}
+          disabled={isSubmitting || isLoading || isReadOnly}
+        >
+          {isReadOnly ? "Relatório fechado" : "Fechar relatório"}
+        </Button>
         <StatusBadge status={relatorioStatus} />
       </div>
 
-      <h1 className="text-2xl font-semibold text-text-900">Relatorio do Dia</h1>
+      <h1 className="text-2xl font-semibold text-text-900">Relatório do Dia</h1>
       <p className="text-sm text-text-700">Cadastro integrado ao backend.</p>
       <p className="text-xs text-text-700">Turno aplicado automaticamente: {turnoAtual}</p>
-      {usuarioNome ? <p className="text-xs text-text-700">Autor automatico: {usuarioNome}</p> : null}
-      <p className="text-xs text-text-700">Campos obrigatorios: empresa, placa, nome e perfil.</p>
+      {usuarioNome ? <p className="text-xs text-text-700">Autor automático: {usuarioNome}</p> : null}
+      <p className="text-xs text-text-700">Campos obrigatórios: empresa, placa, nome e perfil.</p>
       {countdownMinutes !== null && countdownSeconds !== null ? (
         <p className="text-sm font-semibold text-amber-700">
-          Fechamento automatico em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
+          Fechamento automático em {countdownMinutes} min {String(countdownSeconds).padStart(2, "0")} s.
         </p>
       ) : null}
       {clockSimulationStart ? (
-        <p className="text-xs text-amber-700">Simulacao de horario ativa no backend: inicio em {clockSimulationStart}.</p>
+        <p className="text-xs text-amber-700">Simulação de horário ativa no backend: início em {clockSimulationStart}.</p>
       ) : null}
-      {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatorio fechado: somente leitura.</p> : null}
+      {isReadOnly ? <p className="text-sm font-semibold text-amber-700">Relatório fechado: somente leitura.</p> : null}
 
       {feedback ? <FeedbackMessage message={feedback.message} tone={feedback.type} /> : null}
     </div>

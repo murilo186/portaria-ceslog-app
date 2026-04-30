@@ -1,4 +1,4 @@
-﻿import { relatorioRepository } from "../repositories/relatorioRepository";
+import { relatorioRepository } from "../repositories/relatorioRepository";
 import { createRelatorioService } from "./relatorio/createRelatorioService";
 import { getReportClockSnapshot, setClockSimulationStart } from "../utils/clock";
 

@@ -1,17 +1,12 @@
 import type { ButtonHTMLAttributes } from "react";
+import { Button as MuiButton } from "@mui/material";
 
 type ButtonVariant = "primary" | "secondary";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type NativeButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color">;
+
+type ButtonProps = NativeButtonProps & {
   variant?: ButtonVariant;
-};
-
-const baseClassName =
-  "inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
-
-const variantClassName: Record<ButtonVariant, string> = {
-  primary: "bg-brand-500 text-white hover:bg-brand-600",
-  secondary: "border border-surface-200 bg-white text-text-900 hover:bg-surface-50",
 };
 
 export default function Button({
@@ -22,12 +17,27 @@ export default function Button({
   ...props
 }: ButtonProps) {
   return (
-    <button
+    <MuiButton
       type={type}
-      className={`${baseClassName} ${variantClassName[variant]} ${className}`.trim()}
+      className={className}
+      variant={variant === "primary" ? "contained" : "outlined"}
+      sx={{
+        borderRadius: 2,
+        px: 2,
+        py: 1.25,
+        fontSize: "0.875rem",
+        boxShadow: "none",
+        ...(variant === "secondary"
+          ? {
+              borderColor: "#e5e7eb",
+              color: "#111827",
+              backgroundColor: "#fff",
+            }
+          : {}),
+      }}
       {...props}
     >
       {children}
-    </button>
+    </MuiButton>
   );
 }

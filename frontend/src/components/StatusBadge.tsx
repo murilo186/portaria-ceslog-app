@@ -1,19 +1,31 @@
-﻿type StatusBadgeProps = {
-  status: "ABERTO" | "FECHADO";
-};
+import { Chip } from "@mui/material";
 
-const badgeClassByStatus: Record<StatusBadgeProps["status"], string> = {
-  ABERTO: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  FECHADO: "border-slate-200 bg-slate-100 text-slate-700",
+type StatusBadgeProps = {
+  status: "ABERTO" | "FECHADO";
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide ${badgeClassByStatus[status]}`}
-    >
-      {status}
-    </span>
+    <Chip
+      label={status}
+      size="small"
+      sx={{
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        borderWidth: 1,
+        borderStyle: "solid",
+        ...(status === "ABERTO"
+          ? {
+              borderColor: "#a7f3d0",
+              bgcolor: "#ecfdf5",
+              color: "#047857",
+            }
+          : {
+              borderColor: "#e2e8f0",
+              bgcolor: "#f1f5f9",
+              color: "#475569",
+            }),
+      }}
+    />
   );
 }
-

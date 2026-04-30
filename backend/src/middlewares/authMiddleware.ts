@@ -1,4 +1,4 @@
-﻿import { verifyToken } from "../lib/jwt";
+import { verifyToken } from "../lib/jwt";
 import { getActiveSessionId } from "../services/sessionService";
 import { AppError } from "./errorMiddleware";
 import type { NextFunction, Request, Response } from "express";

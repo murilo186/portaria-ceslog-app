@@ -1,4 +1,4 @@
-﻿import type { RelatorioItem, RelatorioItemEditableFields } from "../../../types/relatorio";
+import type { RelatorioItem, RelatorioItemEditableFields } from "../../../types/relatorio";
 import type { Usuario } from "../../../types/usuario";
 
 export const initialFormValues: RelatorioItemEditableFields = {

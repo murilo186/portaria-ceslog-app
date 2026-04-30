@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.fn();
@@ -40,17 +40,23 @@ describe("LoginPage", () => {
         id: 1,
         nome: "Operador",
         usuario: "operador.manha",
+        email: "operador.manha@usuario.local",
         perfil: "OPERADOR",
         turno: "MANHA",
+        tenant: {
+          id: 1,
+          slug: "ceslog",
+          nome: "CESLOG",
+        },
       },
     });
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByLabelText("Usuario"), {
+    fireEvent.change(screen.getByPlaceholderText("Digite seu usuário"), {
       target: { value: "operador.manha" },
     });
-    fireEvent.change(screen.getByLabelText("Senha"), {
+    fireEvent.change(screen.getByPlaceholderText("Digite sua senha"), {
       target: { value: "123456" },
     });
 

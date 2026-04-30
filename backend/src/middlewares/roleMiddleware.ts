@@ -1,4 +1,4 @@
-﻿import { AppError } from "./errorMiddleware";
+import { AppError } from "./errorMiddleware";
 import type { NextFunction, Request, Response } from "express";
 
 export function requireAdmin(req: Request, _res: Response, next: NextFunction) {

@@ -1,4 +1,4 @@
-﻿import type { UsuarioResumo } from "./usuario";
+import type { UsuarioResumo } from "./usuario";
 
 export type PerfilPessoa =
   | "VISITANTE"

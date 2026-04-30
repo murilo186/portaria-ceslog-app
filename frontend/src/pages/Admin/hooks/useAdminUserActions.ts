@@ -70,10 +70,10 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
       });
 
       setNovoUsuarioForm(initialNovoUsuarioForm);
-      setFeedback({ type: "success", message: "Usuario criado com sucesso." });
+      setFeedback({ type: "success", message: "Usuário criado com sucesso." });
       await invalidateAdminQueries(auth.usuario.id);
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel criar usuario.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível criar usuário.") });
     }
   };
 
@@ -99,11 +99,11 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
 
       setFeedback({
         type: "success",
-        message: ativoAtual ? "Usuario inativado com sucesso." : "Usuario ativado com sucesso.",
+        message: ativoAtual ? "Usuário inativado com sucesso." : "Usuário ativado com sucesso.",
       });
       await invalidateAdminQueries(auth.usuario.id);
     } catch (error) {
-      setFeedback({ type: "error", message: getUserErrorMessage(error, "Nao foi possivel atualizar status do usuario.") });
+      setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível atualizar status do usuário.") });
     } finally {
       setPendingUsuarioId(null);
     }

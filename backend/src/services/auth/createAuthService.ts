@@ -1,4 +1,4 @@
-﻿import { AppError } from "../../middlewares/errorMiddleware";
+import { AppError } from "../../middlewares/errorMiddleware";
 import type { IAuthRepository } from "../../repositories/authRepository";
 import type { LoginInput } from "../../types/auth";
 

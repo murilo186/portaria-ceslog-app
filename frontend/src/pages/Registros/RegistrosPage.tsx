@@ -27,8 +27,8 @@ export default function RegistrosPage() {
   return (
     <div className="space-y-6" aria-busy={isLoading || isFetching}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-text-900">Registros Fechados</h1>
-        <p className="text-sm text-text-700">Filtre por data, placa ou nome para localizar relatorios.</p>
+        <h1 className="text-xl font-semibold text-text-900 sm:text-2xl">Registros Fechados</h1>
+        <p className="text-sm text-text-700">Filtre por data, placa ou nome para localizar relatórios.</p>
         {errorMessage ? <FeedbackMessage message={errorMessage} tone="error" /> : null}
       </div>
 
@@ -43,23 +43,23 @@ export default function RegistrosPage() {
               label="Busca por placa ou nome"
               value={searchFilter}
               onChange={(event) => setSearchFilter(event.target.value)}
-              placeholder="Ex.: ABC-1D23 ou Joao"
+              placeholder="Ex.: ABC-1D23 ou João"
             />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={handleApplyFilters} disabled={isLoading}>
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <Button type="button" onClick={handleApplyFilters} disabled={isLoading} className="w-full sm:w-auto">
             Aplicar filtros
           </Button>
-          <Button type="button" variant="secondary" onClick={handleClearFilters} disabled={isLoading}>
+          <Button type="button" variant="secondary" onClick={handleClearFilters} disabled={isLoading} className="w-full sm:w-auto">
             Limpar
           </Button>
         </div>
 
         <p className="text-xs text-text-700">
           {appliedSearchFilter
-            ? `${meta.total} evidencias encontradas para "${appliedSearchFilter}".`
+            ? `${meta.total} evidências encontradas para "${appliedSearchFilter}".`
             : `${meta.total} registro(s) fechado(s) encontrado(s).`}
         </p>
         {isFetching && !isLoading ? <p className="text-xs text-text-700">Atualizando resultados...</p> : null}
@@ -79,7 +79,7 @@ export default function RegistrosPage() {
                 key={registro.id}
                 type="button"
                 onClick={() => handleOpenDetail(registro.id)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-surface-50"
+                className="flex w-full flex-col items-start justify-between gap-2 px-4 py-4 text-left transition-colors hover:bg-surface-50 sm:flex-row sm:items-center"
               >
                 <span className="text-sm font-semibold text-text-900">REGISTRO - {formatDate(registro.dataRelatorio)}</span>
                 <div className="flex items-center gap-2">
@@ -92,15 +92,15 @@ export default function RegistrosPage() {
         </div>
       </Card>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-700">
-          Pagina {meta.page} de {meta.totalPages} Â· {meta.total} registro(s)
+          Página {meta.page} de {meta.totalPages} · {meta.total} registro(s)
         </p>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <Button
             type="button"
             variant="secondary"
-            className="px-3 py-2 text-xs"
+            className="w-full px-3 py-2 text-xs"
             onClick={() => handleChangePage(Math.max(1, meta.page - 1))}
             disabled={isLoading || meta.page <= 1}
           >
@@ -109,14 +109,15 @@ export default function RegistrosPage() {
           <Button
             type="button"
             variant="secondary"
-            className="px-3 py-2 text-xs"
+            className="w-full px-3 py-2 text-xs"
             onClick={() => handleChangePage(Math.min(meta.totalPages, meta.page + 1))}
             disabled={isLoading || meta.page >= meta.totalPages}
           >
-            Proxima
+            Próxima
           </Button>
         </div>
       </div>
     </div>
   );
 }
+

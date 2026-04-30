@@ -1,4 +1,4 @@
-﻿# Backend Roadmap - Performance, Refatoracao e Escalabilidade
+# Backend Roadmap - Performance, Refatoracao e Escalabilidade
 
 ## Objetivo
 Melhorar performance, reduzir latencia de consultas, reforcar regras de negocio criticas e deixar o backend mais facil de manter e evoluir.

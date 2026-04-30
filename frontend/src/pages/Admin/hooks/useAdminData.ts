@@ -71,7 +71,7 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
 
     setFeedback({
       type: "error",
-      message: getUserErrorMessage(closedReportsQuery.error, "Nao foi possivel carregar os registros."),
+      message: getUserErrorMessage(closedReportsQuery.error, "Não foi possível carregar os registros."),
     });
   }, [closedReportsQuery.error, setFeedback]);
 
@@ -82,7 +82,7 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
 
     setFeedback({
       type: "error",
-      message: getUserErrorMessage(usersQuery.error, "Nao foi possivel carregar os usuarios."),
+      message: getUserErrorMessage(usersQuery.error, "Não foi possível carregar os usuários."),
     });
   }, [setFeedback, usersQuery.error]);
 
@@ -93,7 +93,7 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
 
     setFeedback({
       type: "error",
-      message: getUserErrorMessage(logsQuery.error, "Nao foi possivel carregar os logs de auditoria."),
+      message: getUserErrorMessage(logsQuery.error, "Não foi possível carregar os logs de auditoria."),
     });
   }, [logsQuery.error, setFeedback]);
 

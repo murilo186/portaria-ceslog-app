@@ -17,7 +17,7 @@ export default function PrivateRoute({ allowedProfiles, redirectTo = "/dashboard
         to="/"
         replace
         state={{
-          authMessage: "Faca login para continuar.",
+          authMessage: "Faça login para continuar.",
           from: location.pathname,
         }}
       />
@@ -30,7 +30,7 @@ export default function PrivateRoute({ allowedProfiles, redirectTo = "/dashboard
         to={redirectTo}
         replace
         state={{
-          authMessage: "Voce nao tem permissao para acessar esta area.",
+          authMessage: "Você não tem permissão para acessar esta área.",
         }}
       />
     );

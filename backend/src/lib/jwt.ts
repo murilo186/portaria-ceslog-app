@@ -1,4 +1,4 @@
-﻿import { env } from "../config/env";
+import { env } from "../config/env";
 import type { AuthTokenPayload } from "../types/auth";
 import jwt from "jsonwebtoken";
 

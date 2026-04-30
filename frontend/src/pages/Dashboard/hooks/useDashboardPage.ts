@@ -63,13 +63,13 @@ export function useDashboardPage() {
       return;
     }
 
-    setErrorMessage(getUserErrorMessage(openReportQuery.error, "NÃ£o foi possÃ­vel carregar o status do relatÃ³rio"));
+    setErrorMessage(getUserErrorMessage(openReportQuery.error, "Não foi possível carregar o status do relatório"));
   }, [openReportQuery.error]);
 
   const createReportMutation = useMutation({
     mutationFn: async () => {
       if (!authSession) {
-        throw new ApiError("SessÃ£o expirada", 401);
+        throw new ApiError("Sessão expirada", 401);
       }
 
       return createNovoRelatorio(authSession.token);
@@ -83,7 +83,7 @@ export function useDashboardPage() {
       navigate("/relatorio");
     },
     onError: (error) => {
-      setErrorMessage(getUserErrorMessage(error, "NÃ£o foi possÃ­vel criar o relatÃ³rio"));
+      setErrorMessage(getUserErrorMessage(error, "Não foi possível criar o relatório"));
     },
   });
 
@@ -100,7 +100,7 @@ export function useDashboardPage() {
     }
 
     if (hasOpenReport) {
-      setErrorMessage("JÃ¡ existe um relatÃ³rio em aberto. Continue o relatÃ³rio atual.");
+      setErrorMessage("Já existe um relatório em aberto. Continue o relatório atual.");
       return;
     }
 
@@ -110,7 +110,7 @@ export function useDashboardPage() {
 
   const handleContinueReport = () => {
     if (!hasOpenReport) {
-      setErrorMessage("NÃ£o existe relatÃ³rio em aberto no momento.");
+      setErrorMessage("Não existe relatório em aberto no momento.");
       return;
     }
 

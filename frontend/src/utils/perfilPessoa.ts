@@ -1,4 +1,4 @@
-﻿import type { PerfilPessoa } from "../types/relatorio";
+import type { PerfilPessoa } from "../types/relatorio";
 
 export const PERFIL_PESSOA_OPTIONS: Array<{ value: PerfilPessoa; label: string }> = [
   { value: "VISITANTE", label: "Visitante" },

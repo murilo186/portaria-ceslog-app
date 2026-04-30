@@ -28,7 +28,7 @@ export function useRelatorioManageActions({
   const canMutateItem = useCallback(
     (item: RelatorioItem): boolean => {
       if (!canManageItem(item)) {
-        setFeedback({ type: "error", message: "Voce so pode editar registros da sua autoria." });
+        setFeedback({ type: "error", message: "Você só pode editar registros da sua autoria." });
         return false;
       }
 
@@ -51,7 +51,7 @@ export function useRelatorioManageActions({
       if (editActions.editingItemId === item.id) {
         editActions.handleCloseEditModal();
       }
-      setFeedback({ type: "success", message: "Registro excluido com sucesso." });
+      setFeedback({ type: "success", message: "Registro excluído com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
@@ -74,11 +74,11 @@ export function useRelatorioManageActions({
       const payload = buildQuickSetSaidaPayload(item);
       const updatedItem = await updateRelatorioItem(relatorioId, item.id, payload, token);
       setItens((prevItens) => prevItens.map((currentItem) => (currentItem.id === item.id ? updatedItem : currentItem)));
-      setFeedback({ type: "success", message: "Saida atualizada com sucesso." });
+      setFeedback({ type: "success", message: "Saída atualizada com sucesso." });
     } catch (error) {
       setFeedback({
         type: "error",
-        message: getUserErrorMessage(error, "Erro ao atualizar horario de saida"),
+        message: getUserErrorMessage(error, "Erro ao atualizar horário de saída"),
       });
     } finally {
       setIsSubmitting(false);

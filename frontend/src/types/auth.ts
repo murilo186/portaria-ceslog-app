@@ -1,4 +1,4 @@
-﻿import type { Usuario } from "./usuario";
+import type { Usuario } from "./usuario";
 
 export interface LoginRequest {
   usuario: string;

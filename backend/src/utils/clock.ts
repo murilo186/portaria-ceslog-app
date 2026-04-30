@@ -1,4 +1,4 @@
-﻿import { env } from "../config/env";
+import { env } from "../config/env";
 import { getBusinessDateKey as getBusinessDateKeyFromDate } from "./date";
 
 const MS_PER_SECOND = 1000;

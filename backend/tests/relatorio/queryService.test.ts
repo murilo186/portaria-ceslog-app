@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createRelatorioQueryService } from "../../src/services/relatorio/createRelatorioQueryService";
 import type { IRelatorioRepository } from "../../src/repositories/relatorioRepository";
 import type { RelatorioRuntimeDeps } from "../../src/services/relatorio/dependencies";

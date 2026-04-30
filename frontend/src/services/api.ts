@@ -1,4 +1,4 @@
-﻿import { emitAuthRequired } from "./authEvents";
+import { emitAuthRequired } from "./authEvents";
 
 import type { ZodType } from "zod";
 

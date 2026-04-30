@@ -1,4 +1,4 @@
-﻿import type { PerfilUsuario, TurnoUsuario } from "@prisma/client";
+import type { PerfilUsuario, TurnoUsuario } from "@prisma/client";
 
 export type AdminUsuarioListItem = {
   id: number;
