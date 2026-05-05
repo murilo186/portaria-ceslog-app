@@ -12,7 +12,7 @@ function toNormalizedItemPayload(payload: RelatorioItemEditableInput, sanitize: 
   return {
     perfilPessoa: payload.perfilPessoa,
     empresa: sanitize.sanitizeText(payload.empresa),
-    placaVeiculo: payload.placaVeiculo.trim().toUpperCase(),
+    placaVeiculo: sanitize.sanitizeText(payload.placaVeiculo).replace(/\s+/g, ""),
     nome: sanitize.sanitizeText(payload.nome),
     horaEntrada: sanitize.sanitizeNullableText(payload.horaEntrada),
     horaSaida: sanitize.sanitizeNullableText(payload.horaSaida),

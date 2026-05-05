@@ -41,6 +41,11 @@ export interface Relatorio {
   criadoEm: string;
   finalizadoEm: string | null;
   itens: RelatorioItem[];
+  itensPage?: {
+    itemLimit: number;
+    nextItemCursor: number | null;
+    hasMore: boolean;
+  };
 }
 
 export interface RelatorioResumo {

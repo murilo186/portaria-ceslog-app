@@ -31,10 +31,10 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
       updateUsuarioAtivo(usuarioId, ativo, token),
   });
 
-  const invalidateAdminQueries = async (adminUserId: number) => {
+  const invalidateAdminQueries = async (tenantId: number, adminUserId: number) => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers(adminUserId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.adminLogs(adminUserId, AUDIT_LOG_LIMIT) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers(tenantId, adminUserId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminLogs(tenantId, adminUserId, AUDIT_LOG_LIMIT) }),
     ]);
   };
 
@@ -61,7 +61,9 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
         payload,
       });
 
-      queryClient.setQueryData<UsuarioAdminListItem[]>(queryKeys.adminUsers(auth.usuario.id), (previous) => {
+      queryClient.setQueryData<UsuarioAdminListItem[]>(
+        queryKeys.adminUsers(auth.usuario.tenant.id, auth.usuario.id),
+        (previous) => {
         if (!previous) {
           return [created];
         }
@@ -71,7 +73,7 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
 
       setNovoUsuarioForm(initialNovoUsuarioForm);
       setFeedback({ type: "success", message: "Usuário criado com sucesso." });
-      await invalidateAdminQueries(auth.usuario.id);
+      await invalidateAdminQueries(auth.usuario.tenant.id, auth.usuario.id);
     } catch (error) {
       setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível criar usuário.") });
     }
@@ -89,7 +91,9 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
     try {
       await updateUsuarioAtivoMutation.mutateAsync({ token: auth.token, usuarioId, ativo: !ativoAtual });
 
-      queryClient.setQueryData<UsuarioAdminListItem[]>(queryKeys.adminUsers(auth.usuario.id), (previous) => {
+      queryClient.setQueryData<UsuarioAdminListItem[]>(
+        queryKeys.adminUsers(auth.usuario.tenant.id, auth.usuario.id),
+        (previous) => {
         if (!previous) {
           return previous;
         }
@@ -101,7 +105,7 @@ export function useAdminUserActions({ auth, navigateToLogin, setFeedback }: UseA
         type: "success",
         message: ativoAtual ? "Usuário inativado com sucesso." : "Usuário ativado com sucesso.",
       });
-      await invalidateAdminQueries(auth.usuario.id);
+      await invalidateAdminQueries(auth.usuario.tenant.id, auth.usuario.id);
     } catch (error) {
       setFeedback({ type: "error", message: getUserErrorMessage(error, "Não foi possível atualizar status do usuário.") });
     } finally {

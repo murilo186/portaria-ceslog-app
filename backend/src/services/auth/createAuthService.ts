@@ -1,6 +1,7 @@
 import { AppError } from "../../middlewares/errorMiddleware";
 import type { IAuthRepository } from "../../repositories/authRepository";
 import type { LoginInput } from "../../types/auth";
+import { toUpperWithoutAccents } from "../../utils/sanitize";
 
 type PasswordComparer = {
   compare(plain: string, hash: string): Promise<boolean>;
@@ -16,11 +17,11 @@ type TokenSigner = {
     tenantId: number;
     tenantSlug: string;
     tenantNome: string;
-    perfil: "ADMIN" | "OPERADOR";
+    perfil: string;
     nome: string;
     usuario: string | null;
     email: string | null;
-    turno: "MANHA" | "TARDE" | null;
+    turno: string | null;
     sessionId: string;
   }): string;
 };
@@ -33,7 +34,7 @@ export type AuthServiceDeps = {
 };
 
 function normalizeUsuario(value: string): string {
-  return value.trim().toLowerCase();
+  return toUpperWithoutAccents(value.trim());
 }
 
 export function createAuthService({ repository, passwordComparer, sessionIssuer, tokenSigner }: AuthServiceDeps) {

@@ -15,7 +15,7 @@ export default function AdminClosedReportsCard({
   onOpenReport,
 }: AdminClosedReportsCardProps) {
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3" noRadius noShadow>
       <h2 className="text-base font-semibold text-text-900">Últimos registros fechados</h2>
 
       {isLoadingRegistros ? (

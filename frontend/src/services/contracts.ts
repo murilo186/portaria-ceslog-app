@@ -62,7 +62,16 @@ export const relatorioSchema = z.object({
   criadoEm: isoStringSchema,
   finalizadoEm: nullableIsoStringSchema,
   itens: z.array(relatorioItemSchema),
+  itensPage: z
+    .object({
+      itemLimit: z.number().int().positive(),
+      nextItemCursor: z.number().int().nullable(),
+      hasMore: z.boolean(),
+    })
+    .optional(),
 });
+
+export const nullableRelatorioSchema = relatorioSchema.nullable();
 
 export const relatorioResumoSchema = z.object({
   id: z.number().int(),

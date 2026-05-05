@@ -3,18 +3,42 @@ import { Prisma } from "@prisma/client";
 import { toRelatorioResponse } from "./dtoMappers";
 import { RELATORIO_ERROR } from "./errors";
 import type { RelatorioServiceApi, RelatorioServiceContext } from "./types";
+import { getStoredReportDateKey, reportDateFromKey } from "../../utils/date";
 
 export type RelatorioLifecycleServiceApi = Pick<
   RelatorioServiceApi,
   "getOpenReportService" | "createNewReportService" | "getTodayReportService" | "closeRelatorioService"
 >;
 
+function isDuplicateReportError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return true;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeNumber = (error as { number?: unknown }).number;
+    const maybeMessage = String((error as { message?: unknown }).message ?? "");
+
+    if (maybeNumber === 2627 || maybeNumber === 2601) {
+      return true;
+    }
+
+    if (maybeMessage.toLowerCase().includes("duplicate key")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function createRelatorioLifecycleService({ repository, runtime }: RelatorioServiceContext): RelatorioLifecycleServiceApi {
   async function createOpenReport(tenantId: number) {
+    const businessDate = reportDateFromKey(runtime.clock.getCurrentBusinessDateKey());
+
     try {
-      return await repository.createOpenReportWithItems(tenantId, runtime.clock.getCurrentDate());
+      return await repository.createOpenReportWithItems(tenantId, businessDate);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      if (isDuplicateReportError(error)) {
         throw RELATORIO_ERROR.dailyReportAlreadyExists();
       }
 
@@ -28,7 +52,7 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
     if (
       cached &&
       cached.status === "ABERTO" &&
-      runtime.clock.getBusinessDateKey(cached.dataRelatorio) === runtime.clock.getCurrentBusinessDateKey()
+      getStoredReportDateKey(cached.dataRelatorio) === runtime.clock.getCurrentBusinessDateKey()
     ) {
       return toRelatorioResponse(cached);
     }
@@ -60,6 +84,7 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
   }
 
   async function getTodayReportService(tenantId: number) {
+    const businessDate = reportDateFromKey(runtime.clock.getCurrentBusinessDateKey());
     const report = await getOpenReportService(tenantId);
 
     if (report) {
@@ -72,10 +97,16 @@ export function createRelatorioLifecycleService({ repository, runtime }: Relator
       return toRelatorioResponse(created);
     } catch (error) {
       if (error instanceof AppError && error.code === "DAILY_REPORT_ALREADY_EXISTS") {
-        const currentOpenReport = await repository.findOpenReportWithItems(tenantId);
+        const reportFromToday = await repository.findReportByBusinessDateWithItems(tenantId, businessDate);
 
-        if (currentOpenReport) {
-          return toRelatorioResponse(currentOpenReport);
+        if (reportFromToday) {
+          runtime.cache.setReportDetailCache(tenantId, reportFromToday.id, reportFromToday);
+
+          if (reportFromToday.status === "ABERTO") {
+            runtime.cache.setOpenReportCache(tenantId, reportFromToday);
+          }
+
+          return toRelatorioResponse(reportFromToday);
         }
       }
 

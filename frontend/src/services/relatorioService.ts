@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiRequestWithSchema } from "./api";
 import {
+  nullableRelatorioSchema,
   okResponseSchema,
   paginatedRelatorioResumoResponseSchema,
   relatorioClockSnapshotSchema,
@@ -24,8 +25,8 @@ export async function getRelatorioHoje(token: string): Promise<Relatorio> {
   return apiRequestWithSchema("/api/relatorios/hoje", relatorioSchema, { token });
 }
 
-export async function getRelatorioAberto(token: string): Promise<Relatorio> {
-  return apiRequestWithSchema("/api/relatorios/aberto", relatorioSchema, { token });
+export async function getRelatorioAberto(token: string): Promise<Relatorio | null> {
+  return apiRequestWithSchema("/api/relatorios/aberto", nullableRelatorioSchema, { token });
 }
 
 export async function getRelatorioClock(token: string): Promise<RelatorioClockSnapshot> {
@@ -83,8 +84,30 @@ export async function listRelatoriosFechados(
   });
 }
 
-export async function getRelatorioById(relatorioId: number, token: string): Promise<Relatorio> {
-  return apiRequestWithSchema(`/api/relatorios/${relatorioId}`, relatorioSchema, { token });
+type ReportItemsCursorOptions = {
+  itemLimit?: number;
+  itemCursor?: number;
+};
+
+export async function getRelatorioById(
+  relatorioId: number,
+  token: string,
+  options?: ReportItemsCursorOptions,
+): Promise<Relatorio> {
+  const query = new URLSearchParams();
+
+  if (options?.itemLimit) {
+    query.set("itemLimit", String(options.itemLimit));
+  }
+
+  if (typeof options?.itemCursor === "number") {
+    query.set("itemCursor", String(options.itemCursor));
+  }
+
+  const queryString = query.toString();
+  const path = `/api/relatorios/${relatorioId}${queryString ? `?${queryString}` : ""}`;
+
+  return apiRequestWithSchema(path, relatorioSchema, { token });
 }
 
 export async function createRelatorioItem(

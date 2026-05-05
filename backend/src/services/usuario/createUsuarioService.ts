@@ -1,9 +1,9 @@
 import { AppError } from "../../middlewares/errorMiddleware";
 import type { IUsuarioRepository } from "../../repositories/usuarioRepository";
 import type { CreateUsuarioInput } from "../../types/usuario";
-import { sanitizeText } from "../../utils/sanitize";
+import { sanitizeText, toUpperWithoutAccents } from "../../utils/sanitize";
 
-const usuarioRegex = /^[a-z0-9._-]{3,30}$/;
+const usuarioRegex = /^[A-Z0-9._-]{3,30}$/;
 
 type PasswordHasher = {
   hash(value: string, saltRounds: number): Promise<string>;
@@ -15,7 +15,7 @@ type UsuarioServiceDeps = {
 };
 
 function normalizeUsuario(value: string): string {
-  return value.trim().toLowerCase();
+  return toUpperWithoutAccents(value.trim());
 }
 
 function normalizeNome(value: string): string {
@@ -23,7 +23,7 @@ function normalizeNome(value: string): string {
 }
 
 function buildInternalEmail(usuario: string): string {
-  return `${usuario}@usuario.local`;
+  return `${usuario}@USUARIO.LOCAL`;
 }
 
 export function createUsuarioService({ repository, passwordHasher }: UsuarioServiceDeps) {
@@ -37,7 +37,7 @@ export function createUsuarioService({ repository, passwordHasher }: UsuarioServ
 
     if (!usuarioRegex.test(usuario)) {
       throw new AppError(
-        "Usuario invalido. Use 3 a 30 caracteres (a-z, 0-9, ponto, underline ou hifen).",
+        "Usuario invalido. Use 3 a 30 caracteres (A-Z, 0-9, ponto, underline ou hifen).",
         400,
         "INVALID_USERNAME",
       );

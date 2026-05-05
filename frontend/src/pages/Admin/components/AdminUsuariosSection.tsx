@@ -1,4 +1,4 @@
-import type { FormEventHandler } from "react";
+import type { ChangeEvent, FormEventHandler } from "react";
 import { useMemo, useState } from "react";
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
@@ -116,7 +116,7 @@ export default function AdminUsuariosSection({
   return (
     <>
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="space-y-4 xl:col-span-1">
+        <Card className="space-y-4 xl:col-span-1" noRadius noShadow>
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-text-900">Criar usuário</h2>
             <p className="text-sm text-text-700">Campos obrigatórios: nome, usuário, senha e turno.</p>
@@ -151,23 +151,39 @@ export default function AdminUsuariosSection({
               required
             />
 
-            <SelectField
-              id="novo-turno"
-              label="Turno"
-              value={novoUsuarioForm.turno}
-              onChange={(event) => onChangeTurno(event.target.value as TurnoUsuario)}
-            >
-              <option value="MANHA">MANHA</option>
-              <option value="TARDE">TARDE</option>
-            </SelectField>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-text-900">Turno</p>
+              <div className="flex flex-wrap gap-4">
+                <label className="inline-flex items-center gap-2 text-sm text-text-900">
+                  <input
+                    type="radio"
+                    name="novo-turno"
+                    value="MANHA"
+                    checked={novoUsuarioForm.turno === "MANHA"}
+                    onChange={() => onChangeTurno("MANHA")}
+                  />
+                  MANHA
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-text-900">
+                  <input
+                    type="radio"
+                    name="novo-turno"
+                    value="TARDE"
+                    checked={novoUsuarioForm.turno === "TARDE"}
+                    onChange={() => onChangeTurno("TARDE")}
+                  />
+                  TARDE
+                </label>
+              </div>
+            </div>
 
-            <Button type="submit" className="w-full" disabled={isCreatingUsuario || isLoadingUsuarios}>
+            <Button type="submit" className="mt-2 w-full" disabled={isCreatingUsuario || isLoadingUsuarios}>
               {isCreatingUsuario ? "Salvando..." : "Criar usuário"}
             </Button>
           </form>
         </Card>
 
-        <Card className="space-y-3 xl:col-span-2">
+        <Card className="space-y-3 xl:col-span-2" noRadius noShadow>
           <div className="space-y-2">
             <h2 className="text-lg font-semibold text-text-900">Lista de usuários</h2>
             <div className="grid gap-2 md:grid-cols-2">
@@ -181,15 +197,15 @@ export default function AdminUsuariosSection({
                 }}
                 placeholder="Ex.: João ou operador.manha"
               />
-              <SelectField
-                id="usuarios-status"
-                label="Status"
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as StatusFilter);
-                  setPage(1);
-                }}
-              >
+                <SelectField
+                  id="usuarios-status"
+                  label="Status"
+                  value={statusFilter}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                    setStatusFilter(event.target.value as StatusFilter);
+                    setPage(1);
+                  }}
+                >
                 <option value="TODOS">Todos</option>
                 <option value="ATIVO">Ativos</option>
                 <option value="INATIVO">Inativos</option>

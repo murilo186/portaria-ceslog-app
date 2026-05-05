@@ -28,10 +28,7 @@ export const getOpenReportController = asyncHandler(async (req, res) => {
   const report = await getOpenReportService(user.tenantId);
 
   if (!report) {
-    return res.status(404).json({
-      message: "Nao existe relatorio em aberto.",
-      code: "OPEN_REPORT_NOT_FOUND",
-    });
+    return res.status(200).json(null);
   }
 
   return res.status(200).json(report);

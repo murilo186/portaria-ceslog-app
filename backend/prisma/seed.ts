@@ -1,7 +1,10 @@
-import { PerfilUsuario, PrismaClient, TurnoUsuario } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+type PerfilUsuario = "ADMIN" | "OPERADOR";
+type TurnoUsuario = "MANHA" | "TARDE";
 
 type SeedUsuario = {
   tenantSlug: string;
@@ -59,44 +62,44 @@ async function upsertUsuario(usuario: SeedUsuario) {
 }
 
 async function main() {
-  await upsertTenant("ceslog", "CESLOG");
-  await upsertTenant("ucc", "UCC");
+  await upsertTenant("CESLOG", "CESLOG");
+  await upsertTenant("UCC", "UCC");
 
   const usuarios: SeedUsuario[] = [
     {
-      tenantSlug: "ceslog",
-      nome: "Admin Ceslog",
-      usuario: "admin",
-      email: "admin@usuario.local",
+      tenantSlug: "CESLOG",
+      nome: "ADMIN CESLOG",
+      usuario: "ADMIN",
+      email: "ADMIN@USUARIO.LOCAL",
       turno: null,
-      perfil: PerfilUsuario.ADMIN,
+      perfil: "ADMIN",
       senha: "Admin@123",
     },
     {
-      tenantSlug: "ceslog",
-      nome: "Operador Manha",
-      usuario: "operador.manha",
-      email: "operador.manha@usuario.local",
+      tenantSlug: "CESLOG",
+      nome: "OPERADOR MANHA",
+      usuario: "OPERADOR.MANHA",
+      email: "OPERADOR.MANHA@USUARIO.LOCAL",
       turno: "MANHA",
-      perfil: PerfilUsuario.OPERADOR,
+      perfil: "OPERADOR",
       senha: "Operador@123",
     },
     {
-      tenantSlug: "ceslog",
-      nome: "Operador Noite",
-      usuario: "operador.noite",
-      email: "operador.noite@usuario.local",
+      tenantSlug: "CESLOG",
+      nome: "OPERADOR NOITE",
+      usuario: "OPERADOR.NOITE",
+      email: "OPERADOR.NOITE@USUARIO.LOCAL",
       turno: "TARDE",
-      perfil: PerfilUsuario.OPERADOR,
+      perfil: "OPERADOR",
       senha: "Operador@123",
     },
     {
-      tenantSlug: "ucc",
-      nome: "Admin UCC",
-      usuario: "ucc.teste",
-      email: "ucc.teste@usuario.local",
+      tenantSlug: "UCC",
+      nome: "ADMIN UCC",
+      usuario: "UCC.TESTE",
+      email: "UCC.TESTE@USUARIO.LOCAL",
       turno: null,
-      perfil: PerfilUsuario.ADMIN,
+      perfil: "ADMIN",
       senha: "123456",
     },
   ];

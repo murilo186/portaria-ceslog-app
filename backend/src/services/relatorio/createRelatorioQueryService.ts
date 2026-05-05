@@ -3,6 +3,7 @@ import type { ClosedReportsQuery, ReportItemsCursorQuery } from "../../types/rel
 import { RELATORIO_ERROR } from "./errors";
 import { toRelatorioBaseResponse, toRelatorioResponse, toRelatorioResumoResponse } from "./dtoMappers";
 import type { RelatorioServiceApi, RelatorioServiceContext } from "./types";
+import { toUpperWithoutAccents } from "../../utils/sanitize";
 
 export type RelatorioQueryServiceApi = Pick<
   RelatorioServiceApi,
@@ -24,7 +25,7 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
 
     const page = Math.max(1, query.page);
     const pageSize = Math.min(50, Math.max(1, query.pageSize));
-    const normalizedSearch = query.busca?.trim();
+    const normalizedSearch = query.busca?.trim() ? toUpperWithoutAccents(query.busca.trim()) : undefined;
     const canApplyTextSearch = Boolean(normalizedSearch && normalizedSearch.length >= 2);
     const dateRange = runtime.policies.getDateRange(query.data);
 
@@ -43,13 +44,11 @@ export function createRelatorioQueryService({ repository, runtime }: RelatorioSe
             {
               placaVeiculo: {
                 contains: normalizedSearch,
-                mode: "insensitive",
               },
             },
             {
               nome: {
                 contains: normalizedSearch,
-                mode: "insensitive",
               },
             },
           ],

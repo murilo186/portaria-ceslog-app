@@ -37,7 +37,7 @@ export default function IconActionButton({
       sx={{
         border: "1px solid",
         borderColor: action === "delete" ? "#fecaca" : "#e5e7eb",
-        borderRadius: 2,
+        borderRadius: 0,
       }}
       {...props}
     >

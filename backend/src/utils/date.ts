@@ -11,6 +11,10 @@ export function getBusinessDateKey(date = new Date()): string {
   return formatter.format(date);
 }
 
+export function getStoredReportDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 export function reportDateFromKey(key: string): Date {
   return new Date(`${key}T00:00:00.000Z`);
 }

@@ -10,7 +10,10 @@ import { memo, useMemo, type ReactNode } from "react";
 type RegistroDetalheTableProps = {
   relatorio: Relatorio | null;
   isLoading: boolean;
+  isLoadingMoreItems: boolean;
   isAdmin: boolean;
+  hasMoreItemsFromServer: boolean;
+  onLoadMoreItems: () => Promise<void>;
   appliedSearchFilter: string;
   renderHighlightedText: (text: string, term: string) => ReactNode;
   getAutorLabel: (item: Relatorio["itens"][number]) => string;
@@ -19,13 +22,16 @@ type RegistroDetalheTableProps = {
 function RegistroDetalheTable({
   relatorio,
   isLoading,
+  isLoadingMoreItems,
   isAdmin,
+  hasMoreItemsFromServer,
+  onLoadMoreItems,
   appliedSearchFilter,
   renderHighlightedText,
   getAutorLabel,
 }: RegistroDetalheTableProps) {
   const items = relatorio?.itens ?? [];
-  const { visibleCount, visibleItems, hasMore, showMore } = useIncrementalRender({
+  const { visibleCount, visibleItems, hasMore: hasMoreVisibleItems, showMore } = useIncrementalRender({
     items,
     initialCount: 40,
     step: 40,
@@ -124,9 +130,22 @@ function RegistroDetalheTable({
             <p className="text-xs text-text-700">
               Mostrando {visibleCount} de {items.length} item(ns).
             </p>
-            {hasMore ? (
-              <Button type="button" variant="secondary" className="w-full px-3 py-2 text-xs sm:w-auto" onClick={showMore}>
-                Carregar mais
+            {hasMoreVisibleItems || hasMoreItemsFromServer ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full px-3 py-2 text-xs sm:w-auto"
+                onClick={() => {
+                  if (hasMoreVisibleItems) {
+                    showMore();
+                    return;
+                  }
+
+                  void onLoadMoreItems();
+                }}
+                disabled={isLoadingMoreItems}
+              >
+                {isLoadingMoreItems ? "Carregando..." : "Carregar mais"}
               </Button>
             ) : null}
           </div>

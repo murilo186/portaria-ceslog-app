@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAuthSession } from "../../../services/authStorage";
 import { ApiError } from "../../../services/api";
 import { getUserErrorMessage } from "../../../services/errorService";
-import { createNovoRelatorio, getRelatorioAberto } from "../../../services/relatorioService";
+import { createNovoRelatorio, getRelatorioAberto, getRelatorioHoje } from "../../../services/relatorioService";
 import { queryKeys } from "../../../services/queryKeys";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -41,19 +41,9 @@ export function useDashboardPage() {
   }, [authSession, navigate, userIsAdmin]);
 
   const openReportQuery = useQuery({
-    queryKey: queryKeys.openReport(authSession?.usuario.id ?? 0),
+    queryKey: queryKeys.openReport(authSession?.usuario.tenant.id ?? 0, authSession?.usuario.id ?? 0),
     enabled: Boolean(authSession && !userIsAdmin),
-    queryFn: async () => {
-      try {
-        return await getRelatorioAberto(authSession!.token);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          return null;
-        }
-
-        throw error;
-      }
-    },
+    queryFn: () => getRelatorioAberto(authSession!.token),
     staleTime: 60_000,
     gcTime: 10 * 60_000,
   });
@@ -63,13 +53,13 @@ export function useDashboardPage() {
       return;
     }
 
-    setErrorMessage(getUserErrorMessage(openReportQuery.error, "Não foi possível carregar o status do relatório"));
+    setErrorMessage(getUserErrorMessage(openReportQuery.error, "Nao foi possivel carregar o status do relatorio"));
   }, [openReportQuery.error]);
 
   const createReportMutation = useMutation({
     mutationFn: async () => {
       if (!authSession) {
-        throw new ApiError("Sessão expirada", 401);
+        throw new ApiError("Sessao expirada", 401);
       }
 
       return createNovoRelatorio(authSession.token);
@@ -79,11 +69,8 @@ export function useDashboardPage() {
         return;
       }
 
-      queryClient.setQueryData(queryKeys.openReport(authSession.usuario.id), createdReport);
+      queryClient.setQueryData(queryKeys.openReport(authSession.usuario.tenant.id, authSession.usuario.id), createdReport);
       navigate("/relatorio");
-    },
-    onError: (error) => {
-      setErrorMessage(getUserErrorMessage(error, "Não foi possível criar o relatório"));
     },
   });
 
@@ -93,6 +80,24 @@ export function useDashboardPage() {
   const turnoAtual = authSession?.usuario.turno ?? "-";
   const usuarioAtual = authSession?.usuario.nome ?? "";
 
+  const handleDailyConflict = async () => {
+    if (!authSession) {
+      return;
+    }
+
+    const todayReport = await getRelatorioHoje(authSession.token);
+
+    if (todayReport.status === "ABERTO") {
+      queryClient.setQueryData(queryKeys.openReport(authSession.usuario.tenant.id, authSession.usuario.id), todayReport);
+      navigate("/relatorio");
+      return;
+    }
+
+    navigate(`/registros/${todayReport.id}`, {
+      state: { message: "Relatorio do dia ja foi fechado. Consulte o detalhe em modo leitura." },
+    });
+  };
+
   const handleCreateReport = async () => {
     if (!authSession) {
       navigate("/");
@@ -100,17 +105,36 @@ export function useDashboardPage() {
     }
 
     if (hasOpenReport) {
-      setErrorMessage("Já existe um relatório em aberto. Continue o relatório atual.");
+      navigate("/relatorio");
       return;
     }
 
     setErrorMessage(null);
-    await createReportMutation.mutateAsync();
+
+    try {
+      await createReportMutation.mutateAsync();
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        (error.code === "DAILY_REPORT_ALREADY_EXISTS" || error.code === "OPEN_REPORT_EXISTS")
+      ) {
+        try {
+          await handleDailyConflict();
+          return;
+        } catch {
+          setErrorMessage("Ja existe relatorio para hoje, mas nao foi possivel carregar automaticamente.");
+          return;
+        }
+      }
+
+      setErrorMessage(getUserErrorMessage(error, "Nao foi possivel criar o relatorio"));
+    }
   };
 
   const handleContinueReport = () => {
     if (!hasOpenReport) {
-      setErrorMessage("Não existe relatório em aberto no momento.");
+      setErrorMessage("Nao existe relatorio em aberto no momento.");
       return;
     }
 

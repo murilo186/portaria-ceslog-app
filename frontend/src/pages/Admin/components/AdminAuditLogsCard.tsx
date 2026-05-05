@@ -30,7 +30,7 @@ export default function AdminAuditLogsCard({ isLoadingLogs, logs, onRefreshLogs 
   }, [logs, safePage]);
 
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3" noRadius noShadow>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-text-900">Logs de auditoria</h2>
         <div className="flex items-center gap-2">

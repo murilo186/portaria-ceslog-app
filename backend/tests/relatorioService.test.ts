@@ -167,9 +167,9 @@ describe("relatorioService regras criticas", () => {
     const [callArg] = relatorioItemCreateMock.mock.calls[0] as [{ data: Record<string, unknown> }];
     const payload = callArg.data;
 
-    expect(payload.empresa).toBe("Empresa teste");
-    expect(payload.nome).toBe("alert(1) Nome teste");
-    expect(payload.observacoes).toBe("Observacao teste");
+    expect(payload.empresa).toBe("EMPRESA TESTE");
+    expect(payload.nome).toBe("ALERT(1) NOME TESTE");
+    expect(payload.observacoes).toBe("OBSERVACAO TESTE");
     expect(payload.placaVeiculo).toBe("ABC1D23");
   });
 

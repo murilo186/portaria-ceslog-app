@@ -70,9 +70,9 @@ describe("usuarioService", () => {
     hashMock.mockResolvedValue("hash.mock");
     createMock.mockResolvedValue({
       id: 10,
-      nome: "Operador 1",
-      usuario: "operador.1",
-      email: "operador.1@usuario.local",
+      nome: "OPERADOR 1",
+      usuario: "OPERADOR.1",
+      email: "OPERADOR.1@USUARIO.LOCAL",
       perfil: "OPERADOR",
       turno: null,
       ativo: true,
@@ -92,16 +92,16 @@ describe("usuarioService", () => {
     expect(hashMock).toHaveBeenCalledTimes(1);
     expect(createMock).toHaveBeenCalledTimes(1);
     expect(createMock.mock.calls[0][0].data.tenantId).toBe(2);
-    expect(result.usuario).toBe("operador.1");
+    expect(result.usuario).toBe("OPERADOR.1");
   });
 
   it("sanitiza nome ao criar usuario", async () => {
     hashMock.mockResolvedValue("hash.mock");
     createMock.mockResolvedValue({
       id: 12,
-      nome: "Operador Script",
-      usuario: "operador.script",
-      email: "operador.script@usuario.local",
+      nome: "OPERADOR SCRIPT",
+      usuario: "OPERADOR.SCRIPT",
+      email: "OPERADOR.SCRIPT@USUARIO.LOCAL",
       perfil: "OPERADOR",
       turno: "MANHA",
       ativo: true,
@@ -119,7 +119,7 @@ describe("usuarioService", () => {
     );
 
     const [callArg] = createMock.mock.calls[0] as [{ data: Record<string, unknown> }];
-    expect(callArg.data.nome).toBe("alert(1) Operador Script");
+    expect(callArg.data.nome).toBe("ALERT(1) OPERADOR SCRIPT");
   });
 
   it("bloqueia auto exclusao", async () => {

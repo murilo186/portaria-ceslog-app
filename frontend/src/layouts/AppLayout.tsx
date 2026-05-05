@@ -1,12 +1,13 @@
 import { clearAuthSession, getAuthSession } from "../services/authStorage";
 import { subscribeAuthRequired } from "../services/authEvents";
 import { applyTenantTheme, getTenantTheme } from "../theme/tenantTheme";
+import { createMuiTheme } from "../theme/muiTheme";
 import { FaArrowRightFromBracket } from "react-icons/fa6";
 import { IoArrowUndo } from "react-icons/io5";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AppBar, Box, Container, IconButton, Toolbar } from "@mui/material";
+import { AppBar, Box, Container, CssBaseline, IconButton, ThemeProvider, Toolbar } from "@mui/material";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -37,6 +38,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const authSession = getAuthSession();
   const tenantTheme = getTenantTheme(authSession?.usuario?.tenant?.slug);
+  const muiTheme = useMemo(() => createMuiTheme(authSession?.usuario?.tenant?.slug), [authSession?.usuario?.tenant?.slug]);
   const isLoginPage = location.pathname === "/";
   const showBackButton =
     location.pathname === "/relatorio" || location.pathname === "/registros" || location.pathname.startsWith("/registros/");
@@ -102,7 +104,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline />
+      <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {isLoginPage ? null : (
         <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: "1px solid #e5e7eb" }}>
           <Container maxWidth="lg">
@@ -129,9 +133,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </AppBar>
       )}
 
-      <Container maxWidth="xl" sx={{ py: { xs: 3, sm: 4, md: 5 } }}>
-        {children}
-      </Container>
-    </Box>
+      {isLoginPage ? (
+        children
+      ) : (
+        <Container maxWidth="xl" sx={{ py: { xs: 3, sm: 4, md: 5 } }}>
+          {children}
+        </Container>
+      )}
+      </Box>
+    </ThemeProvider>
   );
 }

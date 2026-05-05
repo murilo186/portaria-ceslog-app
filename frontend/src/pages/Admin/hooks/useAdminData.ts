@@ -21,9 +21,10 @@ const ADMIN_CLOSED_REPORTS_PAGE_SIZE = 5;
 
 export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFeedback }: UseAdminDataParams) {
   const usuarioId = auth?.usuario.id ?? null;
+  const tenantId = auth?.usuario.tenant.id ?? null;
   const token = auth?.token ?? null;
   const isAdmin = auth?.usuario.perfil === "ADMIN";
-  const isEnabled = Boolean(token && usuarioId && isAdmin);
+  const isEnabled = Boolean(token && usuarioId && tenantId && isAdmin);
 
   useEffect(() => {
     if (!auth) {
@@ -37,7 +38,7 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
   }, [auth, isAdmin, navigateToDashboard, navigateToLogin]);
 
   const closedReportsQuery = useQuery<RelatorioResumo[]>({
-    queryKey: queryKeys.adminClosedReports(usuarioId ?? 0, ADMIN_CLOSED_REPORTS_PAGE_SIZE),
+    queryKey: queryKeys.adminClosedReports(tenantId ?? 0, usuarioId ?? 0, ADMIN_CLOSED_REPORTS_PAGE_SIZE),
     enabled: isEnabled,
     queryFn: async () => {
       const response = await listRelatoriosFechados(token!, {
@@ -51,14 +52,14 @@ export function useAdminData({ auth, navigateToLogin, navigateToDashboard, setFe
   });
 
   const usersQuery = useQuery<UsuarioAdminListItem[]>({
-    queryKey: queryKeys.adminUsers(usuarioId ?? 0),
+    queryKey: queryKeys.adminUsers(tenantId ?? 0, usuarioId ?? 0),
     enabled: isEnabled,
     queryFn: () => listUsuarios(token!),
     staleTime: 30_000,
   });
 
   const logsQuery = useQuery<AuditLogItem[]>({
-    queryKey: queryKeys.adminLogs(usuarioId ?? 0, AUDIT_LOG_LIMIT),
+    queryKey: queryKeys.adminLogs(tenantId ?? 0, usuarioId ?? 0, AUDIT_LOG_LIMIT),
     enabled: isEnabled,
     queryFn: () => listAuditLogs(token!, AUDIT_LOG_LIMIT),
     staleTime: 15_000,

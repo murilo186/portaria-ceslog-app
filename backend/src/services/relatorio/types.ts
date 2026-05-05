@@ -69,7 +69,7 @@ export type RelatorioServiceApi = {
   deleteRelatorioItemService(relatorioId: number, itemId: number, user: AuthenticatedUser): Promise<{ ok: true }>;
   closeRelatorioService(tenantId: number, relatorioId: number): Promise<{
     id: number;
-    status: "ABERTO" | "FECHADO";
+    status: string;
     dataRelatorio: string;
     criadoEm: string;
     finalizadoEm: string | null;

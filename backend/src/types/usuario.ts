@@ -1,4 +1,5 @@
-import type { PerfilUsuario, TurnoUsuario } from "@prisma/client";
+export type PerfilUsuario = "ADMIN" | "OPERADOR";
+export type TurnoUsuario = "MANHA" | "TARDE";
 
 export type AdminUsuarioListItem = {
   id: number;

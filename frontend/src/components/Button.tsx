@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 import { Button as MuiButton } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -7,6 +8,7 @@ type NativeButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color">;
 
 type ButtonProps = NativeButtonProps & {
   variant?: ButtonVariant;
+  sx?: SxProps<Theme>;
 };
 
 export default function Button({
@@ -14,6 +16,7 @@ export default function Button({
   className = "",
   type = "button",
   variant = "primary",
+  sx,
   ...props
 }: ButtonProps) {
   return (
@@ -22,7 +25,7 @@ export default function Button({
       className={className}
       variant={variant === "primary" ? "contained" : "outlined"}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0,
         px: 2,
         py: 1.25,
         fontSize: "0.875rem",
@@ -34,6 +37,7 @@ export default function Button({
               backgroundColor: "#fff",
             }
           : {}),
+        ...(sx ?? {}),
       }}
       {...props}
     >

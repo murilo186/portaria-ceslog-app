@@ -8,7 +8,6 @@ import { useRelatorioItemActions } from "./useRelatorioItemActions";
 
 export function useRelatorioPage() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const showSimulationControls = import.meta.env.DEV;
 
   const {
     itens,
@@ -66,11 +65,6 @@ export function useRelatorioPage() {
     setEditFormValues,
     handleCloseEditModal,
     handleEditSubmit,
-    handleSimulateClockStart,
-    isCloseModalOpen,
-    handleOpenCloseModal,
-    handleCloseCloseModal,
-    handleConfirmClose,
   } = useRelatorioItemActions({
     token,
     relatorioId,
@@ -86,7 +80,6 @@ export function useRelatorioPage() {
   const getAutorLabelForItem = useCallback((item: RelatorioItem) => getAutorLabel(item, usuarioLogado), [usuarioLogado]);
 
   return {
-    showSimulationControls,
     isSubmitting,
     isLoading,
     isReadOnly,
@@ -112,10 +105,5 @@ export function useRelatorioPage() {
     setEditFormValues,
     handleCloseEditModal,
     handleEditSubmit,
-    handleSimulateClockStart,
-    isCloseModalOpen,
-    handleOpenCloseModal,
-    handleCloseCloseModal,
-    handleConfirmClose,
   };
 }

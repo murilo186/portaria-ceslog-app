@@ -13,6 +13,7 @@ import { buildRegistroCsv, getAutor, getSearchStats, renderHighlightedText } fro
 export { formatDate } from "./registroDetalheHelpers";
 
 export function useRegistroDetalhePage() {
+  const SERVER_ITEMS_PAGE_SIZE = 100;
   const navigate = useNavigate();
   const { relatorioId } = useParams<{ relatorioId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +25,8 @@ export function useRegistroDetalhePage() {
   const [dateFilter, setDateFilter] = useState(initialDateFilter);
   const [searchFilter, setSearchFilter] = useState(initialSearchFilter);
   const [appliedSearchFilter, setAppliedSearchFilter] = useState(initialSearchFilter.trim());
+  const [relatorioState, setRelatorioState] = useState<Relatorio | null>(null);
+  const [isLoadingMoreItems, setIsLoadingMoreItems] = useState(false);
 
   const usuarioLogado: Usuario | null = auth?.usuario ?? null;
 
@@ -46,9 +49,15 @@ export function useRegistroDetalhePage() {
   const relatorioQuery = useQuery<Relatorio>({
     queryKey: queryKeys.reportDetail(parsedRelatorioId ?? 0),
     enabled: Boolean(auth && parsedRelatorioId),
-    queryFn: () => getRelatorioById(parsedRelatorioId as number, auth!.token),
+    queryFn: () => getRelatorioById(parsedRelatorioId as number, auth!.token, { itemLimit: SERVER_ITEMS_PAGE_SIZE }),
     staleTime: 20_000,
   });
+
+  useEffect(() => {
+    if (relatorioQuery.data) {
+      setRelatorioState(relatorioQuery.data);
+    }
+  }, [relatorioQuery.data]);
 
   const errorMessage = useMemo(() => {
     if (relatorioId && parsedRelatorioId === null) {
@@ -62,7 +71,7 @@ export function useRegistroDetalhePage() {
     return getUserErrorMessage(relatorioQuery.error, "Erro ao carregar registro");
   }, [parsedRelatorioId, relatorioId, relatorioQuery.error]);
 
-  const relatorio = relatorioQuery.data ?? null;
+  const relatorio = relatorioState;
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
 
   const searchStats = useMemo(() => {
@@ -112,6 +121,38 @@ export function useRegistroDetalhePage() {
     URL.revokeObjectURL(url);
   }, [relatorio, usuarioLogado]);
 
+  const handleLoadMoreItems = useCallback(async () => {
+    if (!auth || !parsedRelatorioId || !relatorio?.itensPage?.hasMore || isLoadingMoreItems) {
+      return;
+    }
+
+    setIsLoadingMoreItems(true);
+
+    try {
+      const nextChunk = await getRelatorioById(parsedRelatorioId, auth.token, {
+        itemLimit: SERVER_ITEMS_PAGE_SIZE,
+        itemCursor: relatorio.itensPage.nextItemCursor ?? undefined,
+      });
+
+      setRelatorioState((previous) => {
+        if (!previous) {
+          return nextChunk;
+        }
+
+        const existingIds = new Set(previous.itens.map((item) => item.id));
+        const appended = nextChunk.itens.filter((item) => !existingIds.has(item.id));
+
+        return {
+          ...previous,
+          itens: [...previous.itens, ...appended],
+          itensPage: nextChunk.itensPage,
+        };
+      });
+    } finally {
+      setIsLoadingMoreItems(false);
+    }
+  }, [auth, isLoadingMoreItems, parsedRelatorioId, relatorio?.itensPage?.hasMore, relatorio?.itensPage?.nextItemCursor]);
+
   const getAutorLabel = useCallback(
     (item: Relatorio["itens"][number]) => getAutor(item, usuarioLogado),
     [usuarioLogado],
@@ -131,6 +172,9 @@ export function useRegistroDetalhePage() {
     handleApplyFilters,
     handleClearFilters,
     handleDownloadCsv,
+    hasMoreItemsFromServer: Boolean(relatorio?.itensPage?.hasMore),
+    isLoadingMoreItems,
+    handleLoadMoreItems,
     renderHighlightedText,
     getAutorLabel,
   };

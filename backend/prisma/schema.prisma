@@ -3,103 +3,84 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
-}
-
-enum PerfilUsuario {
-  ADMIN
-  OPERADOR
-}
-
-enum TurnoUsuario {
-  MANHA
-  TARDE
-}
-
-enum StatusRelatorio {
-  ABERTO
-  FECHADO
-}
-
-enum PerfilPessoa {
-  VISITANTE
-  FORNECEDOR
-  PRESTADOR
-  PARCEIRO
-  COLABORADOR
-  AGREGADO
+  schemas  = ["portaria"]
 }
 
 model Tenant {
-  id         Int        @id @default(autoincrement())
-  slug       String     @unique
-  nome       String
-  ativo      Boolean    @default(true)
-  criadoEm   DateTime   @default(now())
+  id       Int      @id @default(autoincrement())
+  slug     String   @unique
+  nome     String
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
 
-  usuarios   Usuario[]
-  relatorios Relatorio[]
+  usuarios       Usuario[]
+  relatorios     Relatorio[]
   relatorioItens RelatorioItem[]
-  auditLogs  AuditLog[]
+  auditLogs      AuditLog[]
 
-  @@map("tenants")
+  @@map("portaria_tenants")
+  @@schema("portaria")
 }
 
 model Usuario {
-  id              Int              @id @default(autoincrement())
-  tenantId        Int
-  nome            String
-  usuario         String           @unique
-  email           String?          @unique
-  senhaHash       String
-  perfil          PerfilUsuario
-  turno           TurnoUsuario?
-  ativo           Boolean          @default(true)
-  criadoEm        DateTime         @default(now())
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  nome      String
+  usuario   String   @unique
+  email     String?  @unique
+  senhaHash String
+  perfil    String
+  turno     String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  relatorioItens  RelatorioItem[]
-  auditLogs       AuditLog[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  relatorioItens RelatorioItem[]
+  auditLogs      AuditLog[]
+  authSession    AuthSession?
 
   @@index([tenantId, perfil, ativo])
-  @@map("usuarios")
+  @@map("portaria_usuarios")
+  @@schema("portaria")
 }
 
 model Relatorio {
-  id              Int              @id @default(autoincrement())
-  tenantId        Int
-  dataRelatorio   DateTime
-  status          StatusRelatorio  @default(ABERTO)
-  criadoEm        DateTime         @default(now())
-  finalizadoEm    DateTime?
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  dataRelatorio DateTime  @db.Date
+  status        String    @default("ABERTO")
+  criadoEm      DateTime  @default(now())
+  finalizadoEm  DateTime?
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  itens           RelatorioItem[]
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itens  RelatorioItem[]
 
   @@unique([tenantId, dataRelatorio])
   @@index([tenantId, status, dataRelatorio])
-  @@map("relatorios")
+  @@map("portaria_relatorios")
+  @@schema("portaria")
 }
 
 model RelatorioItem {
-  id              Int        @id @default(autoincrement())
-  tenantId        Int
-  relatorioId     Int
-  usuarioId       Int
-  perfilPessoa    PerfilPessoa @default(VISITANTE)
-  empresa         String
-  placaVeiculo    String
-  nome            String
-  horaEntrada     String?
-  horaSaida       String?
-  observacoes     String?
-  turno           String?
-  criadoEm        DateTime   @default(now())
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  relatorioId  Int
+  usuarioId    Int
+  perfilPessoa String   @default("VISITANTE")
+  empresa      String
+  placaVeiculo String
+  nome         String
+  horaEntrada  String?
+  horaSaida    String?
+  observacoes  String?
+  turno        String?
+  criadoEm     DateTime @default(now())
 
-  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  relatorio       Relatorio  @relation(fields: [relatorioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  usuario         Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  relatorio Relatorio @relation(fields: [relatorioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([tenantId, relatorioId])
   @@index([tenantId, usuarioId])
@@ -107,30 +88,42 @@ model RelatorioItem {
   @@index([tenantId, usuarioId, criadoEm])
   @@index([tenantId, placaVeiculo])
   @@index([tenantId, nome])
-  @@map("relatorio_itens")
+  @@map("portaria_relatorio_itens")
+  @@schema("portaria")
 }
 
 model AuditLog {
-  id              Int       @id @default(autoincrement())
-  tenantId        Int
-  usuarioId       Int?      @map("usuario_id")
-  usuarioNome     String?   @map("usuario_nome")
-  usuarioLogin    String?   @map("usuario_login")
-  acao            String
-  entidade        String
-  entidadeId      Int?      @map("entidade_id")
-  descricao       String
-  detalhes        Json?
-  ip              String?
-  userAgent       String?   @map("user_agent")
-  requestId       String?   @map("request_id")
-  criadoEm        DateTime  @default(now()) @map("criado_em")
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  usuarioId    Int?     @map("usuario_id")
+  usuarioNome  String?  @map("usuario_nome")
+  usuarioLogin String?  @map("usuario_login")
+  acao         String
+  entidade     String
+  entidadeId   Int?     @map("entidade_id")
+  descricao    String
+  detalhes     String?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  requestId    String?  @map("request_id")
+  criadoEm     DateTime @default(now()) @map("criado_em")
 
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([tenantId, usuarioId])
   @@index([tenantId, criadoEm])
-  @@map("audit_logs")
+  @@map("portaria_audit_logs")
+  @@schema("portaria")
 }
 
+model AuthSession {
+  usuarioId    Int      @id @map("usuario_id")
+  sessionId    String   @unique @map("session_id")
+  atualizadoEm DateTime @default(now()) @map("atualizado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("portaria_auth_sessions")
+  @@schema("portaria")
+}

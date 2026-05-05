@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getRelatorioAberto } from "../../../services/relatorioService";
 import { getAuthSession } from "../../../services/authStorage";
-import { ApiError } from "../../../services/api";
 import { getUserErrorMessage } from "../../../services/errorService";
 import { queryKeys } from "../../../services/queryKeys";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
@@ -38,7 +37,7 @@ export function useRelatorioBootstrap({ setFeedback }: UseRelatorioBootstrapPara
   }, [authSession, navigate]);
 
   const openReportQuery = useQuery({
-    queryKey: queryKeys.openReport(authSession?.usuario.id ?? 0),
+    queryKey: queryKeys.openReport(authSession?.usuario.tenant.id ?? 0, authSession?.usuario.id ?? 0),
     enabled: Boolean(authSession),
     queryFn: () => getRelatorioAberto(authSession!.token),
     staleTime: 60_000,
@@ -47,33 +46,35 @@ export function useRelatorioBootstrap({ setFeedback }: UseRelatorioBootstrapPara
   });
 
   useEffect(() => {
-    if (!openReportQuery.data) {
+    if (!openReportQuery.isSuccess) {
       return;
     }
 
-    setRelatorioId(openReportQuery.data.id);
-    setRelatorioStatus(openReportQuery.data.status);
-    setItens(openReportQuery.data.itens);
-  }, [openReportQuery.data]);
+    const openReport = openReportQuery.data;
+
+    if (!openReport) {
+      navigate("/dashboard", {
+        replace: true,
+        state: { message: "Nao existe relatorio em aberto para continuar." },
+      });
+      return;
+    }
+
+    setRelatorioId(openReport.id);
+    setRelatorioStatus(openReport.status);
+    setItens(openReport.itens);
+  }, [navigate, openReportQuery.data, openReportQuery.isSuccess]);
 
   useEffect(() => {
     if (!openReportQuery.error) {
       return;
     }
 
-    if (openReportQuery.error instanceof ApiError && openReportQuery.error.status === 404) {
-      navigate("/dashboard", {
-        replace: true,
-        state: { message: "Não existe relatório em aberto para continuar." },
-      });
-      return;
-    }
-
     setFeedback({
       type: "error",
-      message: getUserErrorMessage(openReportQuery.error, "Erro ao carregar relatório"),
+      message: getUserErrorMessage(openReportQuery.error, "Erro ao carregar relatorio"),
     });
-  }, [navigate, openReportQuery.error, setFeedback]);
+  }, [openReportQuery.error, setFeedback]);
 
   return {
     itens,

@@ -5,8 +5,7 @@ export const createUsuarioSchema = z.object({
   usuario: z
     .string()
     .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9._-]{3,30}$/, "Usuario invalido. Use 3 a 30 caracteres (a-z, 0-9, ponto, underline ou hifen)."),
+    .regex(/^[a-z0-9._-]{3,30}$/i, "Usuario invalido. Use 3 a 30 caracteres (A-Z, 0-9, ponto, underline ou hifen)."),
   senha: z.string().min(6, "Senha deve ter ao menos 6 caracteres").max(100, "Senha deve ter ate 100 caracteres"),
   turno: z.enum(["MANHA", "TARDE"]),
 });

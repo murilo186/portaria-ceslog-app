@@ -18,6 +18,9 @@ export default function RegistroDetalhePage() {
     handleApplyFilters,
     handleClearFilters,
     handleDownloadCsv,
+    hasMoreItemsFromServer,
+    isLoadingMoreItems,
+    handleLoadMoreItems,
     renderHighlightedText,
     getAutorLabel,
   } = useRegistroDetalhePage();
@@ -49,11 +52,28 @@ export default function RegistroDetalhePage() {
       <RegistroDetalheTable
         relatorio={relatorio}
         isLoading={isLoading}
+        isLoadingMoreItems={isLoadingMoreItems}
         isAdmin={isAdmin}
+        hasMoreItemsFromServer={hasMoreItemsFromServer}
+        onLoadMoreItems={handleLoadMoreItems}
         appliedSearchFilter={appliedSearchFilter}
         renderHighlightedText={renderHighlightedText}
         getAutorLabel={getAutorLabel}
       />
+
+      <button
+        type="button"
+        aria-label="Ir para o fim da tela"
+        onClick={() =>
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "smooth",
+          })
+        }
+        className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 border border-surface-200 bg-white/90 px-4 py-2 text-sm font-semibold text-text-900 shadow md:hidden"
+      >
+        ↓
+      </button>
     </div>
   );
 }
